@@ -5,7 +5,6 @@ InOut::InOut()  {
   
   NewState = 0;
   OldState = 0;
-  _HighStateDetection = true;
 }
 
 // Set Values - initialization

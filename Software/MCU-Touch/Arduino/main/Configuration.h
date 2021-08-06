@@ -21,14 +21,12 @@
 #define DIGITAL_PIN_3 9
 #define DIGITAL_PIN_4 10
 
-// Touch fields
-#define TOUCH_FIELD_1 A0
-#define TOUCH_FIELD_2 A1
-#define TOUCH_FIELD_3 A2
-
 // Analog pins
-#define ANALOG_PIN_1 A6
-#define ANALOG_PIN_2 A7
+#define ANALOG_PIN_1 A0
+#define ANALOG_PIN_2 A1
+#define ANALOG_PIN_3 A2
+#define ANALOG_PIN_4 A6
+#define ANALOG_PIN_5 A7
 
 // Dip switches
 #define DIP_SWITCH_1 5
@@ -71,7 +69,7 @@
  *  *******************************************************************************************/
 // Output Config - one of these has to be defined
 #define SINGLE_RELAY
-#define DOUBLE_RELAY              // Define this node as a double relay node, setting below
+//#define DOUBLE_RELAY              // Define this node as a double relay node, setting below
 //#define ROLLER_SHUTTER            // Define this node as a roller shutter node, setting below
 //#define DIMMER                    // Define this node as a 1-channel dimmer node, setting below
 //#define RGB                       // Define this node as a RGB dimmer node, setting below
@@ -141,6 +139,7 @@
 #ifdef SINGLE_RELAY
   #define RELAY_ID_1 0
   #define RELAY_PIN_1 DIGITAL_PIN_3
+  #define TOUCH_FIELD_1 ANALOG_PIN_3
   #define INPUT_PIN_1 DIGITAL_PIN_1
   #define NUMBER_IF_RELAYS 1
 #endif
@@ -151,8 +150,10 @@
   #define RELAY_ID_2 1
   #define RELAY_PIN_1 DIGITAL_PIN_3
   #define RELAY_PIN_2 DIGITAL_PIN_4
+  #define TOUCH_FIELD_1 ANALOG_PIN_1
+  #define TOUCH_FIELD_2 ANALOG_PIN_2
   #define INPUT_PIN_1 DIGITAL_PIN_1
-  #define INPUT_PIN_1 DIGITAL_PIN_2
+  #define INPUT_PIN_2 DIGITAL_PIN_2
   #define NUMBER_OF_RELAYS 2
 #endif
 

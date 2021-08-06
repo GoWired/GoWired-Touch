@@ -25,9 +25,6 @@ class InOut
     uint8_t _RelayPin;
     uint8_t _SensorPin;
     uint8_t _SensorPin2;
-    //bool _LowStateDetection;
-    //bool _HighStateDetection;
-    //bool _Condition;
     bool _RelayOFF;
     bool _RelayON;
 };
