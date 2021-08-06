@@ -33,13 +33,11 @@
                                         Includes
  *  *******************************************************************************************/
 #include "PowerSensor.h"
-#include "InternalTemp.h"
 #include "InOut.h"
 #include "Dimmer.h"
 #include "RShutterControl.h"
 #include "Configuration.h"
 #include <MySensors.h>
-#include <dht.h>
 #include <Wire.h>
 #include <avr/wdt.h>
 #include "SHTSensor.h"
@@ -73,10 +71,8 @@ bool InitConfirm = false;
 LP50XX LP5009(BGR, LP5009_ENABLE_PIN);
 
 //Universal input constructor
-#if (NUMBER_OF_RELAYS + NUMBER_OF_INPUTS > 0)
-  InOut IO[NUMBER_OF_RELAYS+NUMBER_OF_INPUTS];
-  MyMessage msgIO(0, V_LIGHT);
-#endif
+InOut IO[NUMBER_OF_RELAYS+NUMBER_OF_INPUTS];
+MyMessage msgIO(0, V_LIGHT);
 
 // RShutter Control Constructor
 #ifdef ROLLER_SHUTTER
@@ -274,6 +270,10 @@ void presentation() {
   sendSketchInfo(SN, SV);
 
   // OUTPUT
+  #ifdef SINGLE_RELAY
+    present(RELAY_ID_1, S_BINARY, "Relay 1");   wait(PRESENTATION_DELAY);
+  #endif
+
   #ifdef DOUBLE_RELAY
     present(RELAY_ID_1, S_BINARY, "Relay 1");   wait(PRESENTATION_DELAY);
     present(RELAY_ID_2, S_BINARY, "Relay 2");   wait(PRESENTATION_DELAY);
@@ -334,12 +334,18 @@ void presentation() {
 void InitConfirmation() {
 
   // OUTPUT
+  #ifdef SINGLE_RELAY
+    send(msgIO.setSensor(RELAY_ID_1).set(IO[RELAY_ID_1].NewState));
+    request(RELAY_ID_1, V_STATUS);
+    wait(2000, C_SET, V_STATUS);
+  #endif
+
   #ifdef DOUBLE_RELAY
-    send(msgIOD.setSensor(RELAY_ID_1).set(IOD[RELAY_ID_1].NewState));
+    send(msgIO.setSensor(RELAY_ID_1).set(IO[RELAY_ID_1].NewState));
     request(RELAY_ID_1, V_STATUS);
     wait(2000, C_SET, V_STATUS);
 
-    send(msgIOD.setSensor(RELAY_ID_2).set(IOD[RELAY_ID_2].NewState));
+    send(msgIO.setSensor(RELAY_ID_2).set(IO[RELAY_ID_2].NewState));
     request(RELAY_ID_2, V_STATUS);
     wait(2000, C_SET, V_STATUS);
 
@@ -365,7 +371,7 @@ void InitConfirmation() {
   #endif
 
   #ifdef DIMMER
-    send(msgIOD.setSensor(DIMMER_ID).set(false));
+    send(msgIO.setSensor(DIMMER_ID).set(false));
     request(DIMMER_ID, V_STATUS);
     wait(2000, C_SET, V_STATUS);
     
@@ -376,7 +382,7 @@ void InitConfirmation() {
   #endif
 
   #ifdef RGB
-    send(msgIOD.setSensor(DIMMER_ID).set(false));
+    send(msgIO.setSensor(DIMMER_ID).set(false));
     request(DIMMER_ID, V_STATUS);
     wait(2000, C_SET, V_STATUS);
 
@@ -391,7 +397,7 @@ void InitConfirmation() {
   #endif
 
   #ifdef RGBW
-    send(msgIOD.setSensor(DIMMER_ID).set(false));
+    send(msgIO.setSensor(DIMMER_ID).set(false));
     request(DIMMER_ID, V_STATUS);
     wait(2000, C_SET, V_STATUS);
 
@@ -406,7 +412,7 @@ void InitConfirmation() {
   #endif
 
   #ifdef SPECIAL_BUTTON
-    send(msgIOD.setSensor(SPECIAL_BUTTON_ID).set(0));
+    send(msgIO.setSensor(SPECIAL_BUTTON_ID).set(0));
   #endif
 
   // Built-in sensors
@@ -457,8 +463,8 @@ void receive(const MyMessage &message)  {
     #if defined(SINGLE_RELAY) || defined(DOUBLE_RELAY)
       if (message.sensor >= RELAY_ID_1 && message.sensor < NUMBER_OF_RELAYS)  {
         if (!OVERCURRENT_ERROR) {
-          IOD[message.sensor].NewState = message.getBool();
-          IOD[message.sensor].SetRelay();
+          IO[message.sensor].NewState = message.getBool();
+          IO[message.sensor].SetRelay();
         }
       }
     #endif
@@ -524,19 +530,18 @@ void receive(const MyMessage &message)  {
  *  *******************************************************************************************/
 void ETUpdate()  {
 
-    #ifdef SHT30
-      if(sht.readSample())  {
-        send(msgETT.setDestination(0).set(sht.getTemperature(), 1));
-        send(msgETH.set(sht.getHumidity(), 1));
-        #ifdef HEATING_SECTION_SENSOR
-          send(msgETT.setDestination(MY_HEATING_CONTROLLER).set(sht.getTemperature(), 1));
-        #endif
-      }
-      else  {
-        ET_ERROR = 1;
-        send(msgSI.setSensor(ETS_ID).set(ET_ERROR));
-      }
-    #endif
+  #ifdef SHT30
+    if(sht.readSample())  {
+      send(msgETT.setDestination(0).set(sht.getTemperature(), 1));
+      send(msgETH.set(sht.getHumidity(), 1));
+      #ifdef HEATING_SECTION_SENSOR
+        send(msgETT.setDestination(MY_HEATING_CONTROLLER).set(sht.getTemperature(), 1));
+      #endif
+    }
+    else  {
+      ET_ERROR = 1;
+      send(msgSI.setSensor(ETS_ID).set(ET_ERROR));
+    }
   #endif
 }
 
@@ -610,6 +615,7 @@ void IOUpdate() {
                   send(msgIO.setSensor(SPECIAL_BUTTON_ID).set(true));
                   IO[i].NewState = IO[i].OldState;
                 }
+              #endif
             #endif
             break;
           default:
@@ -812,7 +818,7 @@ void loop() {
   // Reading power sensor(s)
   #ifdef POWER_SENSOR
     #if defined(SINGLE_RELAY) || defined(DOUBLE_RELAY) || defined(ROLLER_SHUTTER)
-      if (digitalRead(RELAY_1) == RELAY_ON || digitalRead(RELAY_2) == RELAY_ON)  {
+      if (digitalRead(RELAY_PIN_1) == RELAY_ON || digitalRead(RELAY_PIN_2) == RELAY_ON)  {
         Current = PS.MeasureAC(Vcc);
       }
     #elif defined(DIMMER) || defined(RGB) || defined(RGBW)

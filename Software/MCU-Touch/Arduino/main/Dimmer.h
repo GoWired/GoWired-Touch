@@ -12,7 +12,7 @@ class Dimmer
     void UpdateDimmer();
     void ChangeLevel();
     void ChangeColors();
-    void ChangeState(bool NewState);
+    void ChangeState();
     void NewColorValues(const char *input);
 
     bool NewState = 0;

@@ -151,6 +151,7 @@
 #ifdef SINGLE_RELAY
   #define RELAY_ID_1 0
   #define RELAY_PIN_1 DIGITAL_PIN_3
+  #define RELAY_PIN_2 DIGITAL_PIN_4
   #define TOUCH_FIELD_1 ANALOG_PIN_3
   #define INPUT_PIN_1 DIGITAL_PIN_1
   #define BUTTON_LED_1 LED1
@@ -243,7 +244,7 @@
 #endif
 
 // 1wire external thermometer (e.g. DHT22)
-#ifdef EXTERNAL_TEMP
+#ifdef SHT30
   #define ETT_ID PS_ID+1
   #define ETH_ID ETT_ID+1
 #endif
@@ -255,16 +256,16 @@
 
 #define ELECTRONIC_FUSE
 #ifdef ELECTRONIC_FUSE
-  #define ES_ID ETH_ID+1
+  #define ES_ID 10
 #endif
 
 #ifdef SHT30
-  #define ETS_ID ES_ID+1
+  #define ETS_ID 11
 #endif
 
 //#define RS485_DEBUG
 #ifdef RS485_DEBUG
-  #define DEBUG_ID ETS_ID+1
+  #define DEBUG_ID 12
 #endif
 
 /*  *******************************************************************************************
@@ -288,8 +289,8 @@
 
 // Roller Shutter
 #define EEA_RS_TIME_DOWN EEPROM_OFFSET                  // EEPROM address to save RShutter travel down time
-#define EEA_RS_TIME_UP EEA_RS_TIME_DOWN+SIZE_OF_INT     // EEPROM address to save RShutter travel up time
-#define EEA_RS_POSITION EEA_RS_TIME_UP+SIZE_OF_INT      // EEPROM address to save RShutter last known position
+#define EEA_RS_TIME_UP EEA_RS_TIME_DOWN+SIZE_OF_BYTE     // EEPROM address to save RShutter travel up time
+#define EEA_RS_POSITION EEA_RS_TIME_UP+SIZE_OF_BYTE      // EEPROM address to save RShutter last known position
 
 #endif
 /*
