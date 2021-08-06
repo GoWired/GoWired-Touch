@@ -33,6 +33,11 @@
 #define DIP_SWITCH_2 6
 #define DIP_SWITCH_3 7
 
+// Builtin LEDs - LP5009
+#define LED0 0
+#define LED1 1
+#define LED2 2
+
 // Other
 #define LP5009_ENABLE_PIN A3
 #define RS485_ENABLE_PIN 4
@@ -119,7 +124,14 @@
 #endif
 
 // LP5009
-
+#define R_VALUE_OFF 0
+#define G_VALUE_OFF 128
+#define B_VALUE_OFF 255
+#define R_VALUE_ON 256
+#define G_VALUE_ON 128
+#define B_VALUE_ON 0
+#define BRIGHTNESS_VALUE_OFF 20
+#define BRIGHTNESS_VALUE_ON 40
 
 // Heating system section thermometer
 //#define HEATING_SECTION_SENSOR            // Define if this module if going to be a temperature sensor for a heating controller
@@ -141,6 +153,7 @@
   #define RELAY_PIN_1 DIGITAL_PIN_3
   #define TOUCH_FIELD_1 ANALOG_PIN_3
   #define INPUT_PIN_1 DIGITAL_PIN_1
+  #define BUTTON_LED_1 LED1
   #define NUMBER_IF_RELAYS 1
 #endif
 
@@ -154,6 +167,8 @@
   #define TOUCH_FIELD_2 ANALOG_PIN_2
   #define INPUT_PIN_1 DIGITAL_PIN_1
   #define INPUT_PIN_2 DIGITAL_PIN_2
+  #define BUTTON_LED_1 LED0
+  #define BUTTON_LED_2 LED2
   #define NUMBER_OF_RELAYS 2
 #endif
 
@@ -165,6 +180,8 @@
   #define RELAY_PIN_2 DIGITAL_PIN_4
   #define INPUT_PIN_1 DIGITAL_PIN_1
   #define INPUT_PIN_2 DIGITAL_PIN_2
+  #define BUTTON_LED_1 LED0
+  #define BUTTON_LED_2 LED2
   #define NUMBER_OF_RELAYS 2
 #endif
 
@@ -172,6 +189,8 @@
 #ifdef DIMMER
   #define DIMMER_ID 0
   #define LED_PIN_W DIGITAL_PIN_4
+  #define BUTTON_LED_1 LED0
+  #define BUTTON_LED_2 LED2
   #define NUMBER_OF_CHANNELS 1
 #endif
 
@@ -180,6 +199,8 @@
   #define LED_PIN_R DIGITAL_PIN_1
   #define LED_PIN_G DIGITAL_PIN_2
   #define LED_PIN_B DIGITAL_PIN_3
+  #define BUTTON_LED_1 LED0
+  #define BUTTON_LED_2 LED2
   #define NUMBER_OF_CHANNELS 3
 #endif
 
@@ -189,6 +210,8 @@
   #define LED_PIN_G DIGITAL_PIN_2
   #define LED_PIN_B DIGITAL_PIN_3
   #define LED_PIN_W DIGITAL_PIN_4
+  #define BUTTON_LED_1 LED0
+  #define BUTTON_LED_2 LED2
   #define NUMBER_OF_CHANNELS 4
 #endif
 

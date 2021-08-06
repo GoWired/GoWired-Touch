@@ -61,7 +61,7 @@ bool CheckNow = false;
 // Module Safety Indicators
 bool OVERCURRENT_ERROR = false;            // Overcurrent error status
 bool InformControllerES = false;            // Was controller informed about error?
-uint8_t ET_ERROR = 3;                       // External thermometer status (0 - ok, 1 - checksum error, 2 - timeout error, 3 - default/initialization)
+bool ET_ERROR = 0;                       // External thermometer status (0 - ok, 1 - error)
 
 // Initialization
 bool InitConfirm = false;
@@ -69,6 +69,9 @@ bool InitConfirm = false;
 /*  *******************************************************************************************
                                         Constructors
  *  *******************************************************************************************/
+// LP5009 - onboard RGB LED controller
+LP50XX LP5009(BGR, LP5009_ENABLE_PIN);
+
 //Universal input constructor
 #if (NUMBER_OF_RELAYS + NUMBER_OF_INPUTS > 0)
   InOut IO[NUMBER_OF_RELAYS+NUMBER_OF_INPUTS];
@@ -140,6 +143,63 @@ void setup() {
     wdt_enable(WDTO_2S);
   #endif
 
+  Wire.begin();
+
+  // Support for 400kHz available
+  //Wire.setClock(400000UL);
+
+  LP5009.Begin();
+
+  // LED: 0 || 1 || 2; R,G,B: 0-255, brightness: 0-255
+  // LED0 - D1 (Touch Field A0), LED1 - D3 (Touch Field A2), LED2 - D2 (Touch Field A1)
+  // LP5009.SetLEDColor(LED, R, G, B)
+  // LP5009.SetLEDBrightness(LED, brightness)
+
+  // LED initialization visual effect
+  uint8_t TEMP[3] = {LED0, LED1, LED2};
+  for(int i=0; i<256; i++)  {
+    for(int j=0; j<3; j++)  {
+      LP5009.SetLEDColor(TEMP[j], i, 0, 0);
+      LP5009.SetLEDBrightness(TEMP[j], i);
+      delay(10);
+    }
+  }
+  for(int i=255; i>=0; i--)  {
+    for(int j=0; j<3; j++)  {
+      LP5009.SetLEDColor(TEMP[j], i, 0, 0);
+      LP5009.SetLEDBrightness(TEMP[j], i);
+      delay(10);
+    }
+  }
+  for(int i=0; i<256; i++)  {
+    for(int j=0; j<3; j++)  {
+      LP5009.SetLEDColor(TEMP[j], 0, i, 0);
+      LP5009.SetLEDBrightness(TEMP[j], i);
+      delay(10);
+    }
+  }
+  for(int i=255; i>=0; i--)  {
+    for(int j=0; j<3; j++)  {
+      LP5009.SetLEDColor(TEMP[j], 0, i, 0);
+      LP5009.SetLEDBrightness(TEMP[j], i);
+      delay(10);
+    }
+  }
+  for(int i=0; i<256; i++)  {
+    for(int j=0; j<3; j++)  {
+      LP5009.SetLEDColor(TEMP[j], 0, 0, i);
+      LP5009.SetLEDBrightness(TEMP[j], i);
+      delay(10);
+    }
+  }
+  for(int i=255; i>=0; i--)  {
+    for(int j=0; j<3; j++)  {
+      LP5009.SetLEDColor(TEMP[j], 0, 0, i);
+      LP5009.SetLEDBrightness(TEMP[j], i);
+      delay(10);
+    }
+  }
+
   float Vcc = ReadVcc();  // mV
 
   // POWER SENSOR
@@ -148,6 +208,10 @@ void setup() {
   #endif
 
   // OUTPUT
+  #ifdef SINGLE_RELAY
+    IO[RELAY_ID_1].SetValues(RELAY_OFF, RELAY_ON, 1, TOUCH_FIELD_1, INPUT_PIN_1, RELAY_PIN_1);
+  #endif
+
   #ifdef DOUBLE_RELAY
     IO[RELAY_ID_1].SetValues(RELAY_OFF, RELAY_ON, 1, TOUCH_FIELD_1, INPUT_PIN_1, RELAY_PIN_1);
     IO[RELAY_ID_2].SetValues(RELAY_OFF, RELAY_ON, 1, TOUCH_FIELD_2, INPUT_PIN_2, RELAY_PIN_2);
@@ -181,6 +245,16 @@ void setup() {
     Dimmer.SetValues(NUMBER_OF_CHANNELS, DIMMING_STEP, DIMMING_INTERVAL, LED_PIN_R, LED_PIN_G, LED_PIN_B, LED_PIN_W);
     IO[0].SetValues(RELAY_OFF, RELAY_ON, 0, TOUCH_FIELD_1);
     IO[1].SetValues(RELAY_OFF, RELAY_ON, 0, TOUCH_FIELD_2);
+  #endif
+
+  #ifdef SINGLE_RELAY
+    LP5009.SetLEDColor(BUTTON_LED_1, R_VALUE_OFF, G_VALUE_OFF, B_VALUE_OFF);
+    LP5009.SetLEDBrightness(BUTTON_LED_1, BRIGHTNESS_VALUE_OFF);
+  #else
+    LP5009.SetLEDColor(BUTTON_LED_1, R_VALUE_OFF, G_VALUE_OFF, B_VALUE_OFF);
+    LP5009.SetLEDBrightness(BUTTON_LED_1, BRIGHTNESS_VALUE_OFF);
+    LP5009.SetLEDColor(BUTTON_LED_2, R_VALUE_OFF, G_VALUE_OFF, B_VALUE_OFF);
+    LP5009.SetLEDBrightness(BUTTON_LED_2, BRIGHTNESS_VALUE_OFF);
   #endif
 
   // ONBOARD THERMOMETER
