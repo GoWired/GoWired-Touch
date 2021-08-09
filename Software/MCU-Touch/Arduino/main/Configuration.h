@@ -132,6 +132,8 @@
 #define B_VALUE_ON 0
 #define BRIGHTNESS_VALUE_OFF 20
 #define BRIGHTNESS_VALUE_ON 40
+#define INIT_RAINBOW_DURATION 1000          // Duration of initial rainbow effect (0-65535, default 1000)
+#define INIT_RAINBOW_RATE 1                 // Rate of initial reainbow effect (0-255, default 1)
 
 // Heating system section thermometer
 //#define HEATING_SECTION_SENSOR            // Define if this module if going to be a temperature sensor for a heating controller

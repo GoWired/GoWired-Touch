@@ -135,10 +135,6 @@ void before() {
  *  *******************************************************************************************/
 void setup() {
 
-  #ifdef ENABLE_WATCHDOG
-    wdt_enable(WDTO_2S);
-  #endif
-
   Wire.begin();
 
   // Support for 400kHz available
@@ -152,49 +148,11 @@ void setup() {
   // LP5009.SetLEDBrightness(LED, brightness)
 
   // LED initialization visual effect
-  uint8_t TEMP[3] = {LED0, LED1, LED2};
-  for(int i=0; i<256; i++)  {
-    for(int j=0; j<3; j++)  {
-      LP5009.SetLEDColor(TEMP[j], i, 0, 0);
-      LP5009.SetLEDBrightness(TEMP[j], i);
-      delay(10);
-    }
-  }
-  for(int i=255; i>=0; i--)  {
-    for(int j=0; j<3; j++)  {
-      LP5009.SetLEDColor(TEMP[j], i, 0, 0);
-      LP5009.SetLEDBrightness(TEMP[j], i);
-      delay(10);
-    }
-  }
-  for(int i=0; i<256; i++)  {
-    for(int j=0; j<3; j++)  {
-      LP5009.SetLEDColor(TEMP[j], 0, i, 0);
-      LP5009.SetLEDBrightness(TEMP[j], i);
-      delay(10);
-    }
-  }
-  for(int i=255; i>=0; i--)  {
-    for(int j=0; j<3; j++)  {
-      LP5009.SetLEDColor(TEMP[j], 0, i, 0);
-      LP5009.SetLEDBrightness(TEMP[j], i);
-      delay(10);
-    }
-  }
-  for(int i=0; i<256; i++)  {
-    for(int j=0; j<3; j++)  {
-      LP5009.SetLEDColor(TEMP[j], 0, 0, i);
-      LP5009.SetLEDBrightness(TEMP[j], i);
-      delay(10);
-    }
-  }
-  for(int i=255; i>=0; i--)  {
-    for(int j=0; j<3; j++)  {
-      LP5009.SetLEDColor(TEMP[j], 0, 0, i);
-      LP5009.SetLEDBrightness(TEMP[j], i);
-      delay(10);
-    }
-  }
+  #ifdef SINGLE_RELAY
+    RainbowLED(1, INIT_RAINBOW_DURATION, INIT_RAINBOW_RATE);
+  #else
+    RainbowLED(2, INIT_RAINBOW_DURATION, INIT_RAINBOW_RATE);
+  #endif
 
   float Vcc = ReadVcc();  // mV
 
@@ -258,6 +216,11 @@ void setup() {
     Wire.begin();
     sht.init();
     sht.setAccuracy(SHTSensor::SHT_ACCURACY_MEDIUM);
+  #endif
+
+  // Enable AVR Watchdog
+  #ifdef ENABLE_WATCHDOG
+    wdt_enable(WDTO_2S);
   #endif
 
 }
@@ -440,6 +403,46 @@ void InitConfirmation() {
 
   InitConfirm = true;
 
+}
+
+// Builtin LEDs rainbow effect
+void RainbowLED(uint8_t Variant, uint16_t Duration, uint8_t Rate)	{
+	
+	int RValue = 254;
+	int GValue = 127;
+	int BValue = 1;
+	int RDirection = -1;
+	int GDirection = -1;
+	int BDirection = 1;
+	uint32_t StartTime = millis();
+	
+	while(millis() > StartTime + Duration)	{
+
+    if(Variant == 1)  {
+      LP5009.SetLEDColor(1, RValue, GValue, BValue);      
+    }
+    else if(Variant == 2) {
+      LP5009.SetLEDColor(0, RValue, GValue, BValue);
+      LP5009.SetLEDColor(2, RValue, GValue, BValue);
+		}
+	
+		RValue += RDirection;
+		GValue += GDirection;
+		BValue += BDirection;
+	
+		if(RValue >= 255 || RValue <= 0)	{
+			RDirection = -RDirection;
+		}
+	
+		if(GValue >= 255 || GValue <= 0)	{
+			GDirection = -GDirection;
+		}
+	
+		if(BValue >= 255 || BValue <= 0)	{
+			BDirection = -BDirection;
+		}
+    delay(Rate);
+	}
 }
 
 
