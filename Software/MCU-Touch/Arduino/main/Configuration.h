@@ -150,83 +150,31 @@
 /*  *******************************************************************************************
                     OUTPUT Config
  *  *******************************************************************************************/
-#ifdef SINGLE_RELAY
-  #define RELAY_ID_1 0
-  #define RELAY_PIN_1 DIGITAL_PIN_3
-  #define RELAY_PIN_2 DIGITAL_PIN_4
-  #define TOUCH_FIELD_1 ANALOG_PIN_3
-  #define INPUT_PIN_1 DIGITAL_PIN_1
-  #define BUTTON_LED_1 LED1
-  #define NUMBER_IF_RELAYS 1
-#endif
+// IDs - change to just 2 instances
+#define RELAY_ID_1 0
+#define RELAY_ID_2 1
+#define RS_ID 0
+#define DIMMER_ID 0
 
-// 2SSR DOUBLE_RELAY
-#ifdef DOUBLE_RELAY
-  #define RELAY_ID_1 0
-  #define RELAY_ID_2 1
-  #define RELAY_PIN_1 DIGITAL_PIN_3
-  #define RELAY_PIN_2 DIGITAL_PIN_4
-  #define TOUCH_FIELD_1 ANALOG_PIN_1
-  #define TOUCH_FIELD_2 ANALOG_PIN_2
-  #define INPUT_PIN_1 DIGITAL_PIN_1
-  #define INPUT_PIN_2 DIGITAL_PIN_2
-  #define BUTTON_LED_1 LED0
-  #define BUTTON_LED_2 LED2
-  #define NUMBER_OF_RELAYS 2
-#endif
+// 2Relay Board
+#define RELAY_PIN_1 DIGITAL_PIN_3
+#define RELAY_PIN_2 DIGITAL_PIN_4
+#define TOUCH_FIELD_1 ANALOG_PIN_1
+#define TOUCH_FIELD_2 ANALOG_PIN_2
+#define INPUT_PIN_1 DIGITAL_PIN_1
+#define INPUT_PIN_2 DIGITAL_PIN_2
+#define BUTTON_LED_1 LED0
+#define BUTTON_LED_2 LED2
+#define NUMBER_OF_RELAYS 2
 
-// Roller Shutter
-#ifdef ROLLER_SHUTTER
-  #define RS_ID 0
-  #define RELAY_ID_1 0
-  #define RELAY_PIN_1 DIGITAL_PIN_3
-  #define RELAY_PIN_2 DIGITAL_PIN_4
-  #define INPUT_PIN_1 DIGITAL_PIN_1
-  #define INPUT_PIN_2 DIGITAL_PIN_2
-  #define BUTTON_LED_1 LED0
-  #define BUTTON_LED_2 LED2
-  #define NUMBER_OF_RELAYS 2
-#endif
+// RGBW Board
+#define LED_PIN_R DIGITAL_PIN_1
+#define LED_PIN_G DIGITAL_PIN_2
+#define LED_PIN_B DIGITAL_PIN_3
+#define LED_PIN_W DIGITAL_PIN_4
+#define NUMBER_OF_CHANNELS 4
 
-// Dimmer / RGB / RGBW
-#ifdef DIMMER
-  #define DIMMER_ID 0
-  #define LED_PIN_W DIGITAL_PIN_4
-  #define BUTTON_LED_1 LED0
-  #define BUTTON_LED_2 LED2
-  #define NUMBER_OF_CHANNELS 1
-#endif
-
-#ifdef RGB
-  #define DIMMER_ID 0
-  #define LED_PIN_R DIGITAL_PIN_1
-  #define LED_PIN_G DIGITAL_PIN_2
-  #define LED_PIN_B DIGITAL_PIN_3
-  #define BUTTON_LED_1 LED0
-  #define BUTTON_LED_2 LED2
-  #define NUMBER_OF_CHANNELS 3
-#endif
-
-#ifdef RGBW
-  #define DIMMER_ID 0
-  #define LED_PIN_R DIGITAL_PIN_1
-  #define LED_PIN_G DIGITAL_PIN_2
-  #define LED_PIN_B DIGITAL_PIN_3
-  #define LED_PIN_W DIGITAL_PIN_4
-  #define BUTTON_LED_1 LED0
-  #define BUTTON_LED_2 LED2
-  #define NUMBER_OF_CHANNELS 4
-#endif
-
-#ifdef NUMBER_OF_RELAYS
-  #define FIRST_INPUT_ID NUMBER_OF_RELAYS
-#elif defined(NUMBER_OF_CHANNELS)
-  #define FIRST_INPUT_ID 2
-  #define NUMBER_OF_RELAYS 2
-#else
-  #define NUMBER_OF_RELAYS 0
-  #define FIRST_INPUT_ID 0
-#endif
+#define FIRST_INPUT_ID 2
 
 /*  *******************************************************************************************
                     INPUT Config
