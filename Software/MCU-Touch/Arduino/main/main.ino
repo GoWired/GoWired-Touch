@@ -87,42 +87,29 @@ Dimmer Dimmer;
 // Power sensor
 #if defined(POWER_SENSOR)
   PowerSensor PS;
-  // Rename
-  MyMessage msgPS(PS_ID, V_WATT);
+  MyMessage MsgWATT(0, V_WATT);
 #endif
 
 // Onboard thermometer
 #ifdef SHT30
   SHTSensor sht;
-  // Rename
-  MyMessage msgETT(ETT_ID, V_TEMP);
-  MyMessage msgETH(ETH_ID, V_HUM);
+  MyMessage MsgTEMP(0, V_TEMP);
+  MyMessage MsgHUM(0, V_HUM);
 #endif
 
 // Messages
 // Rename all messages objects into Msg<TYPE>, eg. MsgSTATUS
-// Change message type to V_STATUS
-MyMessage msgIO(0, V_LIGHT);
-MyMessage msgRS1(RS_ID, V_UP);
-MyMessage msgRS2(RS_ID, V_DOWN);
-MyMessage msgRS3(RS_ID, V_STOP);
-// Merge msgRS4 & msgDIM into MsgPERCENTAGE
-MyMessage msgRS4(RS_ID, V_PERCENTAGE);
-MyMessage msgDIM(DIMMER_ID, V_PERCENTAGE);
-MyMessage msgDIM2(DIMMER_ID, V_RGB);
-MyMessage msgDIM3(DIMMER_ID, V_RGBW);
-
-// Error Reporting
-#ifdef ELECTRONIC_FUSE
-  // Remove this object and replace it with msgIO
-  MyMessage msgSI(0, V_STATUS);
-#endif
+MyMessage MsgSTATUS(0, V_STATUS);
+MyMessage MsgUP(0, V_UP);
+MyMessage MsgDOWN(0, V_DOWN);
+MyMessage MsgSTOP(0, V_STOP);
+MyMessage MsgPERCENTAGE(0, V_PERCENTAGE);
+MyMessage MsgRGB(0, V_RGB);
+MyMessage MsgRGBW(0, V_RGBW);
 
 // Debug
 #ifdef RS485_DEBUG
-  MyMessage msgDEBUG(DEBUG_ID, V_TEXT);
-  // Remove and replace with msgPS
-  MyMessage msgDEBUG2(DEBUG_ID, V_WATT);
+  MyMessage MsgTEXT(0, V_TEXT);
 #endif
 
 /*  *******************************************************************************************
@@ -324,35 +311,35 @@ void InitConfirmation() {
   if(HardwareVariant == 0)  {
     // Single output
     if(LoadVariant == 0)  {
-      send(msgIO.setSensor(RELAY_ID_1).set(IO[RELAY_ID_1].NewState));
+      send(MsgSTATUS.setSensor(RELAY_ID_1).set(IO[RELAY_ID_1].NewState));
       request(RELAY_ID_1, V_STATUS);
       wait(2000, C_SET, V_STATUS);
     }
     // Double output
     else if(LoadVariant == 1) {
-      send(msgIO.setSensor(RELAY_ID_1).set(IO[RELAY_ID_1].NewState));
+      send(MsgSTATUS.setSensor(RELAY_ID_1).set(IO[RELAY_ID_1].NewState));
       request(RELAY_ID_1, V_STATUS);
       wait(2000, C_SET, V_STATUS);
 
-      send(msgIO.setSensor(RELAY_ID_2).set(IO[RELAY_ID_2].NewState));
+      send(MsgSTATUS.setSensor(RELAY_ID_2).set(IO[RELAY_ID_2].NewState));
       request(RELAY_ID_2, V_STATUS);
       wait(2000, C_SET, V_STATUS);
     }
     // Roller shutter
     else if(LoadVariant == 2) {
-      send(msgRS1.set(0));
+      send(MsgUP.setSensor(RS_ID).set(0));
       request(RS_ID, V_UP);
       wait(2000, C_SET, V_UP);
 
-      send(msgRS2.set(0));
+      send(MsgDOWN.setSensor(RS_ID).set(0));
       request(RS_ID, V_DOWN);
       wait(2000, C_SET, V_DOWN);
 
-      send(msgRS3.set(0));
+      send(MsgSTOP.setSensor(RS_ID).set(0));
       request(RS_ID, V_STOP);
       wait(2000, C_SET, V_STOP);
 
-      send(msgRS4.set(RS.Position));
+      send(MsgPERCENTAGE.setSensor(RS_ID).set(RS.Position));
       request(RS_ID, V_PERCENTAGE);
       wait(2000, C_SET, V_PERCENTAGE);
     }
@@ -361,68 +348,65 @@ void InitConfirmation() {
   else if(HardwareVariant == 1) {
     // 1-channel dimmer
     if(LoadVariant == 0)  {
-      send(msgIO.setSensor(DIMMER_ID).set(false));
+      send(MsgSTATUS.setSensor(DIMMER_ID).set(false));
       request(DIMMER_ID, V_STATUS);
       wait(2000, C_SET, V_STATUS);
     
-      send(msgDIM.set(0));
+      send(MsgPERCENTAGE.setSensor(DIMMER_ID).set(0));
       request(DIMMER_ID, V_PERCENTAGE);
       wait(2000, C_SET, V_PERCENTAGE);
     }
     // RGB dimmer
     else if(LoadVariant == 1) {
-      send(msgIO.setSensor(DIMMER_ID).set(false));
+      send(MsgSTATUS.setSensor(DIMMER_ID).set(false));
       request(DIMMER_ID, V_STATUS);
       wait(2000, C_SET, V_STATUS);
 
-      send(msgDIM.set(0));
+      send(MsgPERCENTAGE.setSensor(DIMMER_ID).set(0));
       request(DIMMER_ID, V_PERCENTAGE);
       wait(2000, C_SET, V_PERCENTAGE);
 
-      send(msgDIM2.set("000000"));
+      send(MsgRGB.setSensor(DIMMER_ID).set("000000"));
       request(DIMMER_ID, V_RGB);
       wait(2000, C_SET, V_RGB);
     }
     else if(LoadVariant == 2) {
-      send(msgIO.setSensor(DIMMER_ID).set(false));
+      send(MsgSTATUS.setSensor(DIMMER_ID).set(false));
       request(DIMMER_ID, V_STATUS);
       wait(2000, C_SET, V_STATUS);
 
-      send(msgDIM.set(0));
+      send(MsgPERCENTAGE.setSensor(DIMMER_ID).set(0));
       request(DIMMER_ID, V_PERCENTAGE);
       wait(2000, C_SET, V_PERCENTAGE);
 
-      send(msgDIM3.set("00000000"));
+      send(MsgRGBW.setSensor(DIMMER_ID).set("00000000"));
       request(DIMMER_ID, V_RGBW);
       wait(2000, C_SET, V_RGBW);
     }
   }
 
   #ifdef SPECIAL_BUTTON
-    send(msgIO.setSensor(SPECIAL_BUTTON_ID).set(0));
+    send(MsgSTATUS.setSensor(SPECIAL_BUTTON_ID).set(0));
   #endif
 
   // Built-in sensors
   #ifdef POWER_SENSOR
-    send(msgPS.set("0"));
+    send(MsgWATT.set("0"));
   #endif
 
   // External sensors
   #ifdef SHT30
     ETUpdate();
+    send(MsgSTATUS.setSensor(ETS_ID).set(0));
   #endif
 
   //
   #ifdef ELECTRONIC FUSE
-    send(msgSI.setSensor(ES_ID).set(0));
-  #endif
-
-  #ifdef SHT30
-    send(msgSI.setSensor(ETS_ID).set(0));
+    send(MsgSTATUS.setSensor(ES_ID).set(0));
   #endif
 
   #ifdef RS485_DEBUG
-    send(msgDEBUG.setSensor(DEBUG_ID).set("DEBUG MESSAGE"));
+    send(MsgTEXT.setSensor(DEBUG_ID).set("DEBUG MESSAGE"));
   #endif
 
   InitConfirm = true;
@@ -601,15 +585,17 @@ void ETUpdate()  {
 
   #ifdef SHT30
     if(sht.readSample())  {
-      send(msgETT.setDestination(0).set(sht.getTemperature(), 1));
-      send(msgETH.set(sht.getHumidity(), 1));
+      ET_ERROR = 0;
+      send(MsgSTATUS.setSensor(ETS_ID).set(ET_ERROR));
+      send(MsgTEMP.setSensor(ETT_ID).setDestination(0).set(sht.getTemperature(), 1));
+      send(MsgHUM.setSensor(ETH_ID).set(sht.getHumidity(), 1));
       #ifdef HEATING_SECTION_SENSOR
-        send(msgETT.setDestination(MY_HEATING_CONTROLLER).set(sht.getTemperature(), 1));
+        send(MsgTEMP.setSensor(ETT_ID).setDestination(MY_HEATING_CONTROLLER).set(sht.getTemperature(), 1));
       #endif
     }
     else  {
       ET_ERROR = 1;
-      send(msgSI.setSensor(ETS_ID).set(ET_ERROR));
+      send(MsgSTATUS.setSensor(ETS_ID).set(ET_ERROR));
     }
   #endif
 }
@@ -629,12 +615,12 @@ void IOUpdate() {
         switch(IO[i].SensorType)  {
           case 0:
             // Touch Fields only (Hardware: RGBW)
-            #ifdef DIMMER_ID
+            if(HardwareVariant == 1)  {
               if(i == 0)  {
                 if(IO[i].NewState != 2) {
                   // Change dimmer status
                   Dimmer.NewState = !Dimmer.NewState;
-                  send(msgIO.setSensor(DIMMER_ID).set(Dimmer.NewState));
+                  send(MsgSTATUS.setSensor(DIMMER_ID).set(Dimmer.NewState));
                   Dimmer.ChangeState();
                   AdjustLEDs(IO[i].NewState, 0);
                   AdjustLEDs(IO[i].NewState, 1);
@@ -642,7 +628,7 @@ void IOUpdate() {
                 }
                 #ifdef SPECIAL_BUTTON
                   if(IO[i].NewState == 2) {
-                    send(msgIO.setSensor(SPECIAL_BUTTON_ID).set(true));
+                    send(MsgSTATUS.setSensor(SPECIAL_BUTTON_ID).set(true));
                     AdjustLEDs(IO[i].NewState, 0);
                     IO[i].NewState = IO[i].OldState;
                     AdjustLEDs(IO[i].NewState, 0);
@@ -656,46 +642,44 @@ void IOUpdate() {
                     Dimmer.NewDimmingLevel += DIMMING_TOGGLE_STEP;
 
                     Dimmer.NewDimmingLevel = Dimmer.NewDimmingLevel > 100 ? DIMMING_TOGGLE_STEP : Dimmer.NewDimmingLevel;
-                    send(msgDIM.set(Dimmer.NewDimmingLevel));
+                    send(MsgPERCENTAGE.setSensor(DIMMER_ID).set(Dimmer.NewDimmingLevel));
                     Dimmer.ChangeLevel();
                     IO[i].OldState = IO[i].NewState;
                   }
                 }
               }
-            #endif
+            }
           case 1:
             // Touch Fields & External buttons (Hardware: 2Relay)
-            #ifdef ROLLER_SHUTTER
-              if(IO[i].NewState != 2)  {
-                MovementTime = RS.ReadButtons(i);
-                // Adjusting LEDs is done in RSUpdate() function
-                IO[i].OldState = IO[i].NewState;
-              }
-              else  {
-                #ifdef SPECIAL_BUTTON
-                  send(msgIO.setSensor(SPECIAL_BUTTON_ID).set(true));
-                  AdjustLEDs(IO[i].NewState, i);                  
-                  IO[i].NewState = IO[i].OldState;
-                  AdjustLEDs(IO[i].NewState, i);
-                #endif
-              }
-            #else
-              if (IO[i].NewState != 2)  {
-                if (!OVERCURRENT_ERROR)  {
-                  IO[i].SetRelay();
-                  AdjustLEDs(IO[i].NewState, i);
-                  send(msgIO.setSensor(i).set(IO[i].NewState));
+            if(HardwareVariant == 0)  {
+              // 1 relay or 2 relays
+              if(LoadVariant == 0 || LoadVariant == 1)  {
+                if (IO[i].NewState != 2)  {
+                  if (!OVERCURRENT_ERROR)  {
+                    IO[i].SetRelay();
+                    AdjustLEDs(IO[i].NewState, i);
+                    send(MsgSTATUS.setSensor(i).set(IO[i].NewState));
+                  }
                 }
               }
+              // Roller shutter
+              else if(LoadVariant == 2)  {
+                if(IO[i].NewState != 2)  {
+                  MovementTime = RS.ReadButtons(i);
+                  // Adjusting LEDs is done in RSUpdate() function
+                  IO[i].OldState = IO[i].NewState;
+                }
+              }
+            }
+            
+            if(IO[i].NewState == 2) {
               #ifdef SPECIAL_BUTTON
-                else if (IO[i].NewState == 2)  {
-                  send(msgIO.setSensor(SPECIAL_BUTTON_ID).set(true));
-                  AdjustLEDs(IO[i].NewState, i);                  
-                  IO[i].NewState = IO[i].OldState;
-                  AdjustLEDs(IO[i].NewState, i);
-                }
+                send(MsgSTATUS.setSensor(SPECIAL_BUTTON_ID).set(true));
+                AdjustLEDs(IO[i].NewState, i);                  
+                IO[i].NewState = IO[i].OldState;
+                AdjustLEDs(IO[i].NewState, i);
               #endif
-            #endif
+            }
             break;
           default:
             // Nothing to do here
@@ -793,11 +777,11 @@ void RSUpdate() {
       StartTime = millis();
       if(RS.NewState == 0)  {
         AdjustLEDs(1, 0);
-        send(msgRS1);
+        send(MsgUP.setSensor(RS_ID));
       }
       else if(RS.NewState == 1) {
         AdjustLEDs(1, 1);
-        send(msgRS2);
+        send(MsgDOWN.setSensor(RS_ID));
       }
     }
     else  {
@@ -806,7 +790,7 @@ void RSUpdate() {
       StopTime = millis();
       AdjustLEDs(0, 0);
       AdjustLEDs(0, 1);
-      send(msgRS3);
+      send(MsgSTOP.setSensor(RS_ID));
     }
   }
 
@@ -818,7 +802,7 @@ void RSUpdate() {
       StopTime = millis();
       AdjustLEDs(0, 0);
       AdjustLEDs(0, 1);
-      send(msgRS3);
+      send(MsgSTOP.setSensor(RS_ID));
     }
     if(millis() < StartTime)  {
       uint32_t Temp = 4294967295 - StartTime + millis();
@@ -827,7 +811,7 @@ void RSUpdate() {
       RS.Movement();
       AdjustLEDs(0, 0);
       AdjustLEDs(0, 1);
-      send(msgRS3);
+      send(MsgSTOP.setSensor(RS_ID));
       StartTime = 0;
       StopTime = MovementTime;
     }
@@ -837,7 +821,7 @@ void RSUpdate() {
     MeasuredTime = StopTime - StartTime;
     RS.CalculatePosition(Direction, MeasuredTime);
   
-    send(msgRS4.set(RS.Position));
+    send(MsgPERCENTAGE.setSensor(RS_ID).set(RS.Position));
   }
 
   #endif
@@ -849,7 +833,7 @@ void RSUpdate() {
 void PSUpdate(float Current, uint8_t Sensor = 0)  {
   
   #if defined(POWER_SENSOR)
-    send(msgPS.set(PS.CalculatePower(Current, COSFI), 0));
+    send(MsgWATT.setSensor(PS_ID).set(PS.CalculatePower(Current, COSFI), 0));
     PS.OldValue = Current;
   #endif
 
@@ -941,7 +925,7 @@ void loop() {
         for (int i = RELAY_ID_1; i < RELAY_ID_1 + NUMBER_OF_RELAYS; i++)  {
           IO[i].NewState = RELAY_OFF;
           IO[i].SetRelay();
-          send(msgIO.setSensor(i).set(IO[i].NewState));
+          send(MsgSTATUS.setSensor(i).set(IO[i].NewState));
         }
       #elif defined(ROLLER_SHUTTER)
         RS.NewState = 2;
@@ -949,14 +933,14 @@ void loop() {
       #elif defined(DIMMER) || defined(RGB) || defined(RGBW)
         Dimmer.NewState = false;
         Dimmer.ChangeState();
-        send(msgIOD.setSensor(DIMMER_ID).set(Dimmer.NewState));
+        send(MsgSTATUS.setSensor(DIMMER_ID).set(Dimmer.NewState));
       #endif
-      send(msgSI.setSensor(ES_ID).set(OVERCURRENT_ERROR));
+      send(MsgSTATUS.setSensor(ES_ID).set(OVERCURRENT_ERROR));
       InformControllerES = true;
     }
     else if(!OVERCURRENT_ERROR && InformControllerES)  {
       // Current normal (only after reporting error)
-      send(msgSI.setSensor(ES_ID).set(OVERCURRENT_ERROR));
+      send(MsgSTATUS.setSensor(ES_ID).set(OVERCURRENT_ERROR));
       InformControllerES = false;
     }
   #endif
