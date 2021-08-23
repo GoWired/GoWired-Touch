@@ -59,7 +59,7 @@ uint32_t StartTime;
 
 // Timer
 uint32_t LastUpdate = 0;               // Time of last update of interval sensors
-bool CheckNow = false;
+bool CheckNow = true;
 
 // Module Safety Indicators
 bool OVERCURRENT_ERROR = false;            // Overcurrent error status
@@ -424,14 +424,17 @@ void RainbowLED(uint16_t Duration, uint8_t Rate)	{
 	int BDirection = 1;
 	uint32_t StartTime = millis();
 	
-	while(millis() > StartTime + Duration)	{
+	while(millis() < StartTime + Duration)	{
 
     if(HardwareVariant == 0 && LoadVariant == 0)  {
-      LP5009.SetLEDColor(1, RValue, GValue, BValue);      
+      LP5009.SetLEDColor(1, RValue, GValue, BValue);
+      LP5009.SetLEDBrightness(1, BRIGHTNESS_VALUE_ON);
     }
     else {
       LP5009.SetLEDColor(0, RValue, GValue, BValue);
+      LP5009.SetLEDBrightness(0, BRIGHTNESS_VALUE_ON);
       LP5009.SetLEDColor(2, RValue, GValue, BValue);
+      LP5009.SetLEDBrightness(2, BRIGHTNESS_VALUE_ON);
 		}
 	
 		RValue += RDirection;

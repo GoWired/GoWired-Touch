@@ -48,8 +48,8 @@ void Dimmer::UpdateDimmer()	{
 	bool AdjustDimming = true;
 	bool AdjustColors = true;
 	bool ColorStates[4] = {false, false, false, false};
-	uint8_t DeltaDimming = 0;
-	uint8_t DeltaColors = 0;
+	int DeltaDimming = 0;
+	int DeltaColors = 0;
 	uint32_t Time = millis() - _DimmingInterval;
 	
 	do	{
@@ -75,7 +75,7 @@ void Dimmer::UpdateDimmer()	{
 		  }
 		
 		  for(int i=0; i<_NumberOfChannels; i++) {
-			  if(ColorStates[i] == true)	{
+			  if(ColorStates[i])	{
 				  AdjustColors = true;
 				  break;
 			  }
