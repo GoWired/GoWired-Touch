@@ -51,7 +51,7 @@ void setup()  {
     wdt_enable(WDTO_4S);
   #endif
 
-  float Vcc = ReadVcc();  // mV
+  //float Vcc = ReadVcc();  // mV
 
   Serial.begin(115200);
 
@@ -122,15 +122,6 @@ void setup()  {
   if(HardwareVariant == 0)  {
     // Initialize LEDs
     D[0].SetValues(NUMBER_OF_CHANNELS, DIMMING_STEP, DIMMING_INTERVAL, LED_PIN_4, LED_PIN_5, LED_PIN_6);
-    
-    /*// Initial turn on
-    AdjustLEDs(false, 0);
-    
-    // Show initialization (toggle states few times)
-    for(int j=0; j<CALIBRATION_SIGNALS; j++)  {
-      D[j].NewState = !D[j].NewState; D[j].ChangeState();
-      D[j].NewState = !D[j].NewState; D[j].ChangeState();
-    }   */
 
     // Show initialization
     RainbowLED(INIT_RAINBOW_DURATION, INIT_RAINBOW_RATE);
@@ -138,16 +129,14 @@ void setup()  {
     // Initializing and calibrating button
     IO[0].SetValues(RELAY_OFF, RELAY_ON, 1, TOUCH_FIELD_3, INPUT_PIN_1, RELAY_PIN_1);
 
-    // Turn on LED
-    AdjustLEDs(false, 0);
-    
-    // Turning on LEDs
-    D[0].NewState = true; D[0].ChangeState();
-
     // Restore saved state
-    if(RememberStates == true)  {
+    if(RememberStates)  {
       IO[0].SetRelay();
       AdjustLEDs(IO[0].NewState, 0);
+    }
+    else  {
+      // Turn on LED
+      AdjustLEDs(false, 0);
     }
   }
   // Two buttons variant
@@ -156,19 +145,6 @@ void setup()  {
     D[0].SetValues(NUMBER_OF_CHANNELS, DIMMING_STEP, DIMMING_INTERVAL, LED_PIN_1, LED_PIN_2, LED_PIN_3);
     D[1].SetValues(NUMBER_OF_CHANNELS, DIMMING_STEP, DIMMING_INTERVAL, LED_PIN_7, LED_PIN_8, LED_PIN_9);
 
-    /*// Initial turn on
-    for(int i=0; i<Version; i++)  {
-      AdjustLEDs(false, i);
-    }
-    
-    // Show initialization (toggle states few times)
-    for(int i=0; i<CALIBRATION_SIGNALS; i++)  {
-      for(int j=0; j<Version; j++)  {
-        D[j].NewState = !D[j].NewState; D[j].ChangeState();
-        D[j].NewState = !D[j].NewState; D[j].ChangeState();
-      }
-    }*/
-
     // Show initialization
     RainbowLED(INIT_RAINBOW_DURATION, INIT_RAINBOW_RATE);
     
@@ -176,16 +152,17 @@ void setup()  {
     IO[0].SetValues(RELAY_OFF, RELAY_ON, 1, TOUCH_FIELD_1, INPUT_PIN_1, RELAY_PIN_1);
     IO[1].SetValues(RELAY_OFF, RELAY_ON, 1, TOUCH_FIELD_2, INPUT_PIN_2, RELAY_PIN_2);
 
-    // Turning on LEDs
-    for(int i=0; i<2; i++)  {
-      AdjustLEDs(false, i);
-    }
-    
     // Restore saved states
-    if(RememberStates == true)  {
+    if(RememberStates)  {
       for(int i=0; i<2; i++)  {
         IO[i].SetRelay();
         AdjustLEDs(IO[i].NewState, i);
+      }
+    }
+    else  {
+      // Turning on LEDs
+      for(int i=0; i<2; i++)  {
+        AdjustLEDs(false, i);
       }
     }
   }
@@ -197,13 +174,13 @@ void RainbowLED(uint16_t Duration, uint8_t Rate)	{
 	//int RValue = 254;
 	//int GValue = 127;
 	//int BValue = 1;
-	int RDirection = -1;
-	int GDirection = -1;
-	int BDirection = 1;
-  int ColorValues[3] = {254, 127, 1};
-	uint32_t StartTime = millis();
+  int RDirection = -1;
+  int GDirection = -1;
+  int BDirection = 1;
+  int ColorValues[3] = {254, 127, 1};           // R, G, B
+  uint32_t StartTime = millis();
 	
-	while(millis() < StartTime + Duration)	{
+  while(millis() < StartTime + Duration)	{
 
     if(HardwareVariant == 0)  {
       for(int i=0; i<NUMBER_OF_CHANNELS; i++) {
@@ -217,29 +194,29 @@ void RainbowLED(uint16_t Duration, uint8_t Rate)	{
         D[0].NewValues[i] = ColorValues[i];
         D[1].NewValues[i] = ColorValues[i];
       }
-      D[0].NewDimmingLevel = BRIGHTNESS_VALUE_ON;
-      D[1].NewDimmingLevel = BRIGHTNESS_VALUE_ON;
-      D[0].UpdateDimmer();
-      D[1].UpdateDimmer();
-		}
+      for(int j=0; j<2; j++)  {
+        D[j].NewDimmingLevel = BRIGHTNESS_VALUE_ON;
+        D[j].UpdateDimmer();
+      }
+    }
 	
-		ColorValues[0] += RDirection;
-		ColorValues[1] += GDirection;
-		ColorValues[2] += BDirection;
+    ColorValues[0] += RDirection;
+    ColorValues[1] += GDirection;
+    ColorValues[2] += BDirection;
 	
-		if(ColorValues[0] >= 255 || ColorValues[0] <= 0)	{
-			RDirection = -RDirection;
-		}
+    if(ColorValues[0] >= 255 || ColorValues[0] <= 0)	{
+      RDirection = -RDirection;
+    }
 	
-		if(ColorValues[1] >= 255 || ColorValues[1] <= 0)	{
-			GDirection = -GDirection;
-		}
+    if(ColorValues[1] >= 255 || ColorValues[1] <= 0)	{
+      GDirection = -GDirection;
+    }
 	
-		if(ColorValues[2] >= 255 || ColorValues[2] <= 0)	{
-			BDirection = -BDirection;
-		}
+    if(ColorValues[2] >= 255 || ColorValues[2] <= 0)	{
+      BDirection = -BDirection;
+    }
     delay(Rate);
-	}
+  }
 }
 
 // Adjust LEDs
@@ -247,7 +224,7 @@ void AdjustLEDs(bool State, uint8_t Dimmer) {
 
   if(State != 1) {
     for(int i=0; i<NUMBER_OF_CHANNELS; i++) {
-      D[Dimmer].NewValues[i] = ValuesOff[i];      
+      D[Dimmer].NewValues[i] = ValuesOff[i];
     }
     D[Dimmer].NewDimmingLevel = BRIGHTNESS_VALUE_OFF;
   }
@@ -261,7 +238,7 @@ void AdjustLEDs(bool State, uint8_t Dimmer) {
   D[Dimmer].UpdateDimmer();
 }
 
-// ReadVcc
+/*// ReadVcc
 long ReadVcc() {
   
   long result;
@@ -281,7 +258,7 @@ long ReadVcc() {
   result = result;
   
   return result;
-}
+}*/
 
 // Loop
 void loop() {

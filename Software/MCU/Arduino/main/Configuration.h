@@ -34,9 +34,9 @@
 #define DIP_SWITCH_3 7
 
 // Builtin LEDs - LP5009
-#define LED0 0
-#define LED1 1
-#define LED2 2
+#define BUILTIN_LED0 0
+#define BUILTIN_LED1 2
+#define BUILTIN_LED2 1
 
 // Other
 #define LP5009_ENABLE_PIN A3
@@ -132,8 +132,8 @@
 #define B_VALUE_ON 0
 #define BRIGHTNESS_VALUE_OFF 20
 #define BRIGHTNESS_VALUE_ON 40
-#define INIT_RAINBOW_DURATION 1000          // Duration of initial rainbow effect (0-65535, default 1000)
-#define INIT_RAINBOW_RATE 1                 // Rate of initial reainbow effect (0-255, default 1)
+#define RAINBOW_DURATION 1000          // Duration of initial rainbow effect (0-65535, default 1000)
+#define RAINBOW_RATE 1                 // Rate of initial reainbow effect (0-255, default 1)
 
 // Heating system section thermometer
 //#define HEATING_SECTION_SENSOR            // Define if this module if going to be a temperature sensor for a heating controller
@@ -164,8 +164,6 @@
 #define TOUCH_FIELD_3 ANALOG_PIN_3
 #define INPUT_PIN_1 DIGITAL_PIN_1
 #define INPUT_PIN_2 DIGITAL_PIN_2
-#define BUTTON_LED_1 LED0
-#define BUTTON_LED_2 LED2
 #define NUMBER_OF_RELAYS 2
 
 // RGBW Board

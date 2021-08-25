@@ -133,6 +133,20 @@ void before() {
  *  *******************************************************************************************/
 void setup() {
 
+  #ifdef SINGLE_RELAY
+    HardwareVariant = 0; LoadVariant = 0;
+  #elif defined(DOUBLE_RELAY)
+    HardwareVariant = 0;  LoadVariant = 1;
+  #elif defined(ROLLER_SHUTTER)
+    HardwareVariant = 0;  LoadVariant = 2;
+  #elif defined(DIMMER)
+    HardwareVariant = 1;  LoadVariant = 0;
+  #elif defined(RGB)
+    HardwareVariant = 1;  LoadVariant = 1;
+  #elif defined(RGBW)
+    HardwareVariant = 1;  LoadVariant = 2;
+  #endif
+
   Wire.begin();
 
   // Support for 400kHz available
@@ -146,16 +160,7 @@ void setup() {
   // LP5009.SetLEDBrightness(LED, brightness)
 
   // LED initialization visual effect
-  #ifdef SINGLE_RELAY
-    HardwareVariant = 0; LoadVariant = 0;    
-    RainbowLED(INIT_RAINBOW_DURATION, INIT_RAINBOW_RATE);
-    LP5009.SetLEDBrightness(1, 0);
-  #else
-    HardwareVariant = 0; LoadVariant = 1;
-    RainbowLED(INIT_RAINBOW_DURATION, INIT_RAINBOW_RATE);
-    LP5009.SetLEDBrightness(0, 0);
-    LP5009.SetLEDBrightness(2, 0);
-  #endif
+  RainbowLED(RAINBOW_DURATION, RAINBOW_RATE);
 
   float Vcc = ReadVcc();  // mV
 
@@ -164,57 +169,46 @@ void setup() {
     PS.SetValues(PS_PIN, MVPERAMP, RECEIVER_VOLTAGE, MAX_CURRENT, POWER_MEASURING_TIME, Vcc);
   #endif
 
-  // OUTPUT
-  #ifdef SINGLE_RELAY
-    IO[RELAY_ID_1].SetValues(RELAY_OFF, RELAY_ON, 1, TOUCH_FIELD_1, INPUT_PIN_1, RELAY_PIN_1);
-    HardwareVariant = 0;
-    LoadVariant = 0;
-  #endif
-
-  #ifdef DOUBLE_RELAY
-    IO[RELAY_ID_1].SetValues(RELAY_OFF, RELAY_ON, 1, TOUCH_FIELD_1, INPUT_PIN_1, RELAY_PIN_1);
-    IO[RELAY_ID_2].SetValues(RELAY_OFF, RELAY_ON, 1, TOUCH_FIELD_2, INPUT_PIN_2, RELAY_PIN_2);
-    HardwareVariant = 0;
-    LoadVariant = 1;
-  #endif
-
-  #ifdef ROLLER_SHUTTER
-    IO[RS_ID].SetValues(RELAY_OFF, RELAY_ON, 1, TOUCH_FIELD_1, INPUT_PIN_1, RELAY_PIN_1);
-    IO[RS_ID + 1].SetValues(RELAY_OFF, RELAY_ON, 1, TOUCH_FIELD_2, INPUT_PIN_2, RELAY_PIN_2);
-    HardwareVariant = 0;
-    LoadVariant = 2;
-    if(!RS.Calibrated)  {
-    #ifdef RS_AUTO_CALIBRATION
-      RSCalibration(Vcc);
-    #else
-      RS.Calibration(UP_TIME, DOWN_TIME);
-    #endif
+  if(HardwareVariant == 0)  {
+    if(LoadVariant == 0)  {
+      // One button, one relay
+      IO[RELAY_ID_1].SetValues(RELAY_OFF, RELAY_ON, 1, TOUCH_FIELD_1, INPUT_PIN_1, RELAY_PIN_1);
     }
-  #endif
-
-  #ifdef DIMMER
-    Dimmer.SetValues(NUMBER_OF_CHANNELS, DIMMING_STEP, DIMMING_INTERVAL, LED_PIN_W);
+    else if(LoadVariant == 1) {
+      // Two buttons, two relays
+      IO[RELAY_ID_1].SetValues(RELAY_OFF, RELAY_ON, 1, TOUCH_FIELD_1, INPUT_PIN_1, RELAY_PIN_1);
+      IO[RELAY_ID_2].SetValues(RELAY_OFF, RELAY_ON, 1, TOUCH_FIELD_2, INPUT_PIN_2, RELAY_PIN_2);
+    }
+    else if(LoadVariant == 2) {
+      // Two buttons, roller shutter
+      IO[RS_ID].SetValues(RELAY_OFF, RELAY_ON, 1, TOUCH_FIELD_1, INPUT_PIN_1, RELAY_PIN_1);
+      IO[RS_ID + 1].SetValues(RELAY_OFF, RELAY_ON, 1, TOUCH_FIELD_2, INPUT_PIN_2, RELAY_PIN_2);
+      if(!RS.Calibrated)  {
+        #ifdef RS_AUTO_CALIBRATION
+          RSCalibration(Vcc);
+        #else
+          RS.Calibration(UP_TIME, DOWN_TIME);
+        #endif
+      }
+    }
+  }
+  else if(HardwareVariant == 1) {
+    if(LoadVariant == 0)  {
+      // One channel dimmer
+      Dimmer.SetValues(NUMBER_OF_CHANNELS, DIMMING_STEP, DIMMING_INTERVAL, LED_PIN_W);
+    }
+    else if(LoadVariant == 1) {
+      // RGB dimmer
+      Dimmer.SetValues(NUMBER_OF_CHANNELS, DIMMING_STEP, DIMMING_INTERVAL, LED_PIN_R, LED_PIN_G, LED_PIN_B);
+    }
+    else if(LoadVariant == 2) {
+      // RGBW dimmer
+      Dimmer.SetValues(NUMBER_OF_CHANNELS, DIMMING_STEP, DIMMING_INTERVAL, LED_PIN_R, LED_PIN_G, LED_PIN_B, LED_PIN_W);
+    }
+    // Every dimmer has two buttons
     IO[0].SetValues(RELAY_OFF, RELAY_ON, 0, TOUCH_FIELD_1);
-    IO[1].SetValues(RELAY_OFF, RELAY_ON, 0, TOUCH_FIELD_2);
-    HardwareVariant = 1;
-    LoadVariant = 0;
-  #endif
-
-  #ifdef RGB
-    Dimmer.SetValues(NUMBER_OF_CHANNELS, DIMMING_STEP, DIMMING_INTERVAL, LED_PIN_R, LED_PIN_G, LED_PIN_B);
-    IO[0].SetValues(RELAY_OFF, RELAY_ON, 0, TOUCH_FIELD_1);
-    IO[1].SetValues(RELAY_OFF, RELAY_ON, 0, TOUCH_FIELD_2);
-    HardwareVariant = 1;
-    LoadVariant = 1;
-  #endif
-
-  #ifdef RGBW
-    Dimmer.SetValues(NUMBER_OF_CHANNELS, DIMMING_STEP, DIMMING_INTERVAL, LED_PIN_R, LED_PIN_G, LED_PIN_B, LED_PIN_W);
-    IO[0].SetValues(RELAY_OFF, RELAY_ON, 0, TOUCH_FIELD_1);
-    IO[1].SetValues(RELAY_OFF, RELAY_ON, 0, TOUCH_FIELD_2);
-    HardwareVariant = 1;
-    LoadVariant = 2;
-  #endif
+    IO[1].SetValues(RELAY_OFF, RELAY_ON, 0, TOUCH_FIELD_2); 
+  }
 
   if(HardwareVariant == 0 && LoadVariant == 0)  {
     /* AdjustLEDs(State [0 - OFF, 1 - ON, 2 - Rainbow], LED [0 - TF A0, 1 - TF A2, 2 - TF A1]) */
@@ -416,44 +410,45 @@ void InitConfirmation() {
 // Builtin LEDs rainbow effect
 void RainbowLED(uint16_t Duration, uint8_t Rate)	{
 	
-	int RValue = 254;
-	int GValue = 127;
-	int BValue = 1;
-	int RDirection = -1;
-	int GDirection = -1;
-	int BDirection = 1;
-	uint32_t StartTime = millis();
+  int RValue = 254;
+  int GValue = 127;
+  int BValue = 1;
+  int RDirection = -1;
+  int GDirection = -1;
+  int BDirection = 1;
+  uint32_t StartTime = millis();
 	
-	while(millis() < StartTime + Duration)	{
+  while(millis() < StartTime + Duration)	{
 
     if(HardwareVariant == 0 && LoadVariant == 0)  {
-      LP5009.SetLEDColor(1, RValue, GValue, BValue);
-      LP5009.SetLEDBrightness(1, BRIGHTNESS_VALUE_ON);
+      LP5009.SetLEDColor(BUILTIN_LED2, RValue, GValue, BValue);
+      LP5009.SetLEDBrightness(BUILTIN_LED2, BRIGHTNESS_VALUE_ON);
     }
     else {
-      LP5009.SetLEDColor(0, RValue, GValue, BValue);
-      LP5009.SetLEDBrightness(0, BRIGHTNESS_VALUE_ON);
-      LP5009.SetLEDColor(2, RValue, GValue, BValue);
-      LP5009.SetLEDBrightness(2, BRIGHTNESS_VALUE_ON);
-		}
+      uint8_t LEDs[2] = {BUILTIN_LED0, BUILTIN_LED1};
+      for(int i=0; i<2; i++)  {
+        LP5009.SetLEDColor(LEDs[i], RValue, GValue, BValue);
+        LP5009.SetLEDBrightness(LEDs[i], BRIGHTNESS_VALUE_ON);
+      }
+    }
 	
-		RValue += RDirection;
-		GValue += GDirection;
-		BValue += BDirection;
+    RValue += RDirection;
+    GValue += GDirection;
+    BValue += BDirection;
 	
-		if(RValue >= 255 || RValue <= 0)	{
-			RDirection = -RDirection;
-		}
+    if(RValue >= 255 || RValue <= 0)	{
+      RDirection = -RDirection;
+    }
 	
-		if(GValue >= 255 || GValue <= 0)	{
-			GDirection = -GDirection;
-		}
+    if(GValue >= 255 || GValue <= 0)	{
+      GDirection = -GDirection;
+    }
 	
-		if(BValue >= 255 || BValue <= 0)	{
-			BDirection = -BDirection;
-		}
+    if(BValue >= 255 || BValue <= 0)	{
+      BDirection = -BDirection;
+    }
     wait(Rate);
-	}
+  }
 }
 
 // Adjust Builtin LEDs
@@ -463,10 +458,10 @@ void AdjustLEDs(uint8_t State, uint8_t Button) {
 
   //uint8_t LED2 = LED == 0 ? 2 : 0;
   if(HardwareVariant == 0 && LoadVariant == 0)  {
-    LED = 1;
+    LED = BUILTIN_LED2;
   }
   else  {
-    LED = Button == 0 ? 0 : 2;
+    LED = Button == 0 ? BUILTIN_LED0 : BUILTIN_LED1;
   }
 
   switch(State) {
@@ -479,12 +474,7 @@ void AdjustLEDs(uint8_t State, uint8_t Button) {
       LP5009.SetLEDBrightness(LED, BRIGHTNESS_VALUE_ON);
       break;
     case 2:
-      if(LED == 1)  {
-        RainbowLED(INIT_RAINBOW_DURATION, INIT_RAINBOW_RATE);
-      }
-      else  {
-        RainbowLED(INIT_RAINBOW_DURATION, INIT_RAINBOW_RATE);
-      }
+      RainbowLED(RAINBOW_DURATION, RAINBOW_RATE);
       break;
     default:
       break;
@@ -506,13 +496,14 @@ void receive(const MyMessage &message)  {
     #if defined(DIMMER) || defined(RGB) || defined(RGBW)
       if (message.sensor == DIMMER_ID) {
         Dimmer.NewState = message.getBool();
+        for(int i=0; i<2; i++)  {
+          AdjustLEDs(Dimmer.NewState, i);
+        }
         Dimmer.ChangeState();
-        AdjustLEDs(Dimmer.NewState, 0);
-        AdjustLEDs(Dimmer.NewState, 1);
       }
     #endif
     #if defined(SINGLE_RELAY) || defined(DOUBLE_RELAY)
-      if (message.sensor >= RELAY_ID_1 && message.sensor < NUMBER_OF_RELAYS)  {
+      if (message.sensor == RELAY_ID_1 || message.sensor == RELAY_ID_2)  {
         if (!OVERCURRENT_ERROR) {
           IO[message.sensor].NewState = message.getBool();
           IO[message.sensor].SetRelay();
@@ -539,8 +530,9 @@ void receive(const MyMessage &message)  {
         Dimmer.NewDimmingLevel = Dimmer.NewDimmingLevel < 0 ? 0 : Dimmer.NewDimmingLevel;
 
         Dimmer.NewState = true;
-        AdjustLEDs(Dimmer.NewState, 0);
-        AdjustLEDs(Dimmer.NewState, 1);
+        for(int i=0; i<2; i++)  {
+          AdjustLEDs(Dimmer.NewState, i);
+        }
         Dimmer.ChangeLevel();
       }
     #endif
@@ -551,8 +543,9 @@ void receive(const MyMessage &message)  {
         const char *rgbvalues = message.getString();
 
         Dimmer.NewState = true;
-        AdjustLEDs(Dimmer.NewState, 0);
-        AdjustLEDs(Dimmer.NewState, 1);
+        for(int i=0; i<2; i++)  {
+          AdjustLEDs(Dimmer.NewState, i);
+        }
         Dimmer.NewColorValues(rgbvalues);
         Dimmer.ChangeColors();
       }
@@ -623,10 +616,11 @@ void IOUpdate() {
                 if(IO[i].NewState != 2) {
                   // Change dimmer status
                   Dimmer.NewState = !Dimmer.NewState;
-                  send(MsgSTATUS.setSensor(DIMMER_ID).set(Dimmer.NewState));
+                  for(int j=0; j<2; j++)  {
+                    AdjustLEDs(IO[i].NewState, j);
+                  }
                   Dimmer.ChangeState();
-                  AdjustLEDs(IO[i].NewState, 0);
-                  AdjustLEDs(IO[i].NewState, 1);
+                  send(MsgSTATUS.setSensor(DIMMER_ID).set(Dimmer.NewState));
                   IO[i].OldState = IO[i].NewState;
                 }
                 #ifdef SPECIAL_BUTTON
@@ -647,8 +641,20 @@ void IOUpdate() {
                     Dimmer.NewDimmingLevel = Dimmer.NewDimmingLevel > 100 ? DIMMING_TOGGLE_STEP : Dimmer.NewDimmingLevel;
                     send(MsgPERCENTAGE.setSensor(DIMMER_ID).set(Dimmer.NewDimmingLevel));
                     Dimmer.ChangeLevel();
+                  }
+                  else  {
+                    // If dimmer is turned off - turn it on
+                    Dimmer.NewState = 1;
+                    for(int j=0; j<2; j++)  {
+                      AdjustLEDs(IO[i].NewState, j);
+                    }
+                    Dimmer.ChangeState();
+                    send(MsgSTATUS.setSensor(DIMMER_ID).set(Dimmer.NewState));
                     IO[i].OldState = IO[i].NewState;
                   }
+                }
+                else  {
+                  // Handling of longpress of the second button
                 }
               }
             }
@@ -674,11 +680,11 @@ void IOUpdate() {
                 }
               }
             }
-            
+            // Special button
             if(IO[i].NewState == 2) {
               #ifdef SPECIAL_BUTTON
                 send(MsgSTATUS.setSensor(SPECIAL_BUTTON_ID).set(true));
-                AdjustLEDs(IO[i].NewState, i);                  
+                AdjustLEDs(IO[i].NewState, i);
                 IO[i].NewState = IO[i].OldState;
                 AdjustLEDs(IO[i].NewState, i);
               #endif
