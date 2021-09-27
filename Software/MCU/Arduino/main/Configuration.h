@@ -34,9 +34,9 @@
 #define DIP_SWITCH_3 7
 
 // Builtin LEDs - LP5009
-#define BUILTIN_LED0 0
-#define BUILTIN_LED1 2
+#define BUILTIN_LED1 3
 #define BUILTIN_LED2 1
+#define BUILTIN_LED3 2
 
 // Other
 #define LP5009_ENABLE_PIN A3
@@ -52,8 +52,8 @@
                     MySensors Definitions
  *  *******************************************************************************************/
 // Identification
-#define MY_NODE_ID 1                            // Set node ID
-#define SN "GetWired Module"               // Set node name to present to a controller
+#define MY_NODE_ID 10                            // Set node ID
+#define SN "GoWired Touch Module"               // Set node name to present to a controller
 #define SV "1.0"                                // Set sensor version
 
 // Selecting transmission settings
@@ -73,8 +73,8 @@
                     Quick config
  *  *******************************************************************************************/
 // Output Config - one of these has to be defined
-#define SINGLE_RELAY
-//#define DOUBLE_RELAY              // Define this node as a double relay node, setting below
+//#define SINGLE_RELAY
+#define DOUBLE_RELAY              // Define this node as a double relay node, setting below
 //#define ROLLER_SHUTTER            // Define this node as a roller shutter node, setting below
 //#define DIMMER                    // Define this node as a 1-channel dimmer node, setting below
 //#define RGB                       // Define this node as a RGB dimmer node, setting below
@@ -94,7 +94,7 @@
 #define RELAY_OFF LOW                       // Pin state to turn the relays off (default LOW)
 
 // Hardware detection
-#define HARDWARE_DETECTION_PIN ANALOG_PIN_1 // A6 or A7, tbd
+#define HARDWARE_DETECTION_PIN ANALOG_PIN_5 // Pin to determina Hardware variant of shield
 
 // Reading inputs
 #define TOUCH_THRESHOLD 5                   // A threshold to determine if it was a touch what was sensed (default 5, max. 65535)
@@ -125,14 +125,14 @@
 
 // LP5009
 #define R_VALUE_OFF 0
-#define G_VALUE_OFF 128
+#define G_VALUE_OFF 127
 #define B_VALUE_OFF 255
-#define R_VALUE_ON 256
-#define G_VALUE_ON 128
+#define R_VALUE_ON 255
+#define G_VALUE_ON 127
 #define B_VALUE_ON 0
 #define BRIGHTNESS_VALUE_OFF 20
 #define BRIGHTNESS_VALUE_ON 40
-#define RAINBOW_DURATION 1000          // Duration of initial rainbow effect (0-65535, default 1000)
+#define RAINBOW_DURATION 2000          // Duration of initial rainbow effect (0-65535, default 1000)
 #define RAINBOW_RATE 1                 // Rate of initial reainbow effect (0-255, default 1)
 
 // Heating system section thermometer
@@ -157,13 +157,13 @@
 #define DIMMER_ID 0
 
 // 2Relay Board
-#define RELAY_PIN_1 DIGITAL_PIN_3
-#define RELAY_PIN_2 DIGITAL_PIN_4
+#define RELAY_PIN_1 DIGITAL_PIN_2
+#define RELAY_PIN_2 DIGITAL_PIN_1
 #define TOUCH_FIELD_1 ANALOG_PIN_1
 #define TOUCH_FIELD_2 ANALOG_PIN_2
 #define TOUCH_FIELD_3 ANALOG_PIN_3
-#define INPUT_PIN_1 DIGITAL_PIN_1
-#define INPUT_PIN_2 DIGITAL_PIN_2
+#define INPUT_PIN_1 DIGITAL_PIN_3
+#define INPUT_PIN_2 DIGITAL_PIN_4
 #define NUMBER_OF_RELAYS 2
 
 // RGBW Board
@@ -189,7 +189,7 @@
 // ACS712 Power Sensor
 #ifdef POWER_SENSOR
   #define PS_ID SPECIAL_BUTTON_ID+1
-  #define PS_PIN ANALOG_PIN_2
+  #define PS_PIN ANALOG_PIN_4
 #endif
 
 // 1wire external thermometer (e.g. DHT22)

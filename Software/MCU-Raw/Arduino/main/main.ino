@@ -18,10 +18,7 @@ bool RollerShutter = false;                 // false - lighting; true - roller s
 bool Monostable = false;
 bool RememberStates = false;
 
-//uint8_t DimmingLevelOff;
-//uint8_t DimmingLevelOn;
-uint8_t ValuesOff[3] = {R_VALUE_OFF, G_VALUE_OFF, B_VALUE_OFF};
-uint8_t ValuesOn[3] = {R_VALUE_ON, G_VALUE_ON, B_VALUE_ON};
+uint32_t LastCheck = 0;
 
 uint32_t RSTimer;
 bool RSReset = false;
@@ -47,13 +44,7 @@ void before() {
 // Setup
 void setup()  {
 
-  #ifdef ENABLE_WATCHDOG
-    wdt_enable(WDTO_4S);
-  #endif
-
   //float Vcc = ReadVcc();  // mV
-
-  Serial.begin(115200);
 
   // Temporary code to substitute hardware variant detection
   #ifdef SINGLE_RELAY
@@ -119,9 +110,9 @@ void setup()  {
   }
 
   // One button variant
-  if(HardwareVariant == 0)  {
+  if(HardwareVariant == 1)  {
     // Initialize LEDs
-    D[0].SetValues(NUMBER_OF_CHANNELS, DIMMING_STEP, DIMMING_INTERVAL, LED_PIN_4, LED_PIN_5, LED_PIN_6);
+    D[0].SetValues(NUMBER_OF_CHANNELS, DIMMING_STEP, DIMMING_INTERVAL, LED_PIN_7, LED_PIN_8, LED_PIN_9);
 
     // Show initialization
     RainbowLED(INIT_RAINBOW_DURATION, INIT_RAINBOW_RATE);
@@ -140,10 +131,10 @@ void setup()  {
     }
   }
   // Two buttons variant
-  else if(HardwareVariant == 1) {
+  else if(HardwareVariant == 2) {
     // Initialize LEDs
     D[0].SetValues(NUMBER_OF_CHANNELS, DIMMING_STEP, DIMMING_INTERVAL, LED_PIN_1, LED_PIN_2, LED_PIN_3);
-    D[1].SetValues(NUMBER_OF_CHANNELS, DIMMING_STEP, DIMMING_INTERVAL, LED_PIN_7, LED_PIN_8, LED_PIN_9);
+    D[1].SetValues(NUMBER_OF_CHANNELS, DIMMING_STEP, DIMMING_INTERVAL, LED_PIN_4, LED_PIN_5, LED_PIN_6);
 
     // Show initialization
     RainbowLED(INIT_RAINBOW_DURATION, INIT_RAINBOW_RATE);
@@ -166,53 +157,42 @@ void setup()  {
       }
     }
   }
+
+  #ifdef ENABLE_WATCHDOG
+    wdt_enable(WDTO_4S);
+  #endif
 }
 
 // Builtin LEDs rainbow effect
 void RainbowLED(uint16_t Duration, uint8_t Rate)	{
 	
-	//int RValue = 254;
-	//int GValue = 127;
-	//int BValue = 1;
+  int RValue = 254;
+  int GValue = 127;
+  int BValue = 1;
   int RDirection = -1;
   int GDirection = -1;
   int BDirection = 1;
-  int ColorValues[3] = {254, 127, 1};           // R, G, B
   uint32_t StartTime = millis();
 	
   while(millis() < StartTime + Duration)	{
 
-    if(HardwareVariant == 0)  {
-      for(int i=0; i<NUMBER_OF_CHANNELS; i++) {
-        D[0].NewValues[i] = ColorValues[i];
-      }
-      D[0].NewDimmingLevel = BRIGHTNESS_VALUE_ON;
-      D[0].UpdateDimmer();
-    }
-    else if(HardwareVariant == 1) {
-      for(int i=0; i<NUMBER_OF_CHANNELS; i++) {
-        D[0].NewValues[i] = ColorValues[i];
-        D[1].NewValues[i] = ColorValues[i];
-      }
-      for(int j=0; j<2; j++)  {
-        D[j].NewDimmingLevel = BRIGHTNESS_VALUE_ON;
-        D[j].UpdateDimmer();
-      }
+    for(int i=1; i<=HardwareVariant; i++)  {
+      D[i-1].UpdateLEDs(BRIGHTNESS_VALUE_ON, RValue, GValue, BValue);
     }
 	
-    ColorValues[0] += RDirection;
-    ColorValues[1] += GDirection;
-    ColorValues[2] += BDirection;
+    RValue += RDirection;
+    GValue += GDirection;
+    BValue += BDirection;
 	
-    if(ColorValues[0] >= 255 || ColorValues[0] <= 0)	{
+    if(RValue >= 255 || RValue <= 0)	{
       RDirection = -RDirection;
     }
 	
-    if(ColorValues[1] >= 255 || ColorValues[1] <= 0)	{
+    if(GValue >= 255 || GValue <= 0)	{
       GDirection = -GDirection;
     }
 	
-    if(ColorValues[2] >= 255 || ColorValues[2] <= 0)	{
+    if(BValue >= 255 || BValue <= 0)	{
       BDirection = -BDirection;
     }
     delay(Rate);
@@ -223,47 +203,16 @@ void RainbowLED(uint16_t Duration, uint8_t Rate)	{
 void AdjustLEDs(bool State, uint8_t Dimmer) {
 
   if(State != 1) {
-    for(int i=0; i<NUMBER_OF_CHANNELS; i++) {
-      D[Dimmer].NewValues[i] = ValuesOff[i];
-    }
-    D[Dimmer].NewDimmingLevel = BRIGHTNESS_VALUE_OFF;
+    D[Dimmer].UpdateLEDs(BRIGHTNESS_VALUE_OFF, R_VALUE_OFF, G_VALUE_OFF, B_VALUE_OFF);
   }
   else  {
-    for(int i=0; i<NUMBER_OF_CHANNELS; i++) {
-      D[Dimmer].NewValues[i] = ValuesOn[i];
-    }
-    D[Dimmer].NewDimmingLevel = BRIGHTNESS_VALUE_ON;
+    D[Dimmer].UpdateLEDs(BRIGHTNESS_VALUE_ON, R_VALUE_ON, G_VALUE_ON, B_VALUE_ON);
   }
-
-  D[Dimmer].UpdateDimmer();
 }
 
-/*// ReadVcc
-long ReadVcc() {
-  
-  long result;
-  
-  // Read 1.1V reference against AVcc
-  ADMUX = _BV(REFS0) | _BV(MUX3) | _BV(MUX2) | _BV(MUX1);
-  
-  delay(2);
-  
-  ADCSRA |= _BV(ADSC); // Convert
-  
-  while (bit_is_set(ADCSRA,ADSC));
-  
-  result = ADCL;
-  result |= ADCH<<8;
-  result = 1126400L / result; // Back-calculate AVcc in mV
-  result = result;
-  
-  return result;
-}*/
+// Check Inputs and adjust outputs
+void UpdateIO() {
 
-// Loop
-void loop() {
-
-  // Check inputs & adjust outputs
   for(int i=0; i<HardwareVariant; i++)  {
     IO[i].ReadInput(TOUCH_THRESHOLD, /*LONGPRESS_DURATION,*/ DEBOUNCE_VALUE, Monostable);
     if(IO[i].NewState != IO[0].OldState)  {
@@ -286,17 +235,36 @@ void loop() {
         }
       }
       else  {
-        IO[i].SetRelay();
-        AdjustLEDs(IO[i].NewState, i);
+        if(!Monostable) {
+          IO[i].SetRelay();
+          AdjustLEDs(IO[i].NewState, i);
+        }
         // Saving state to eeprom
         //EEPROM.put(EPPROM_Address[i], IO[i].NewState);
       }
     }
   }
+}
+
+// Loop
+void loop() {
+
+  #ifdef ENABLE_WATCHDOG
+    wdt_reset();
+  #endif
+
+  // Check inputs & adjust outputs
+  if(millis() > LastCheck + LOOP_TIME)  {
+    LastCheck = millis();
+    UpdateIO();
+  }
+  else if(millis() < LastCheck) {
+    LastCheck = millis();
+  }
 
   // Roller shutter timer  
   if(RollerShutter == true) {
-    if(millis() > RSTimer + RS_INTERVAL && RSReset)  {
+    if((millis() > RSTimer + RS_INTERVAL) && RSReset)  {
       for(int i=0; i<2; i++)  {
         IO[i].NewState = 0;
         IO[i].SetRelay();
@@ -305,6 +273,4 @@ void loop() {
       RSReset = false;
     }
   }
-  
-
 }

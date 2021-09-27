@@ -172,7 +172,7 @@ void setup() {
   if(HardwareVariant == 0)  {
     if(LoadVariant == 0)  {
       // One button, one relay
-      IO[RELAY_ID_1].SetValues(RELAY_OFF, RELAY_ON, 1, TOUCH_FIELD_1, INPUT_PIN_1, RELAY_PIN_1);
+      IO[RELAY_ID_1].SetValues(RELAY_OFF, RELAY_ON, 1, TOUCH_FIELD_3, INPUT_PIN_1, RELAY_PIN_1);
     }
     else if(LoadVariant == 1) {
       // Two buttons, two relays
@@ -211,12 +211,12 @@ void setup() {
   }
 
   if(HardwareVariant == 0 && LoadVariant == 0)  {
-    /* AdjustLEDs(State [0 - OFF, 1 - ON, 2 - Rainbow], LED [0 - TF A0, 1 - TF A2, 2 - TF A1]) */
-    AdjustLEDs(0, 1);
+    /* AdjustLEDs(State [0 - OFF, 1 - ON, 2 - Rainbow], Button [0 or 1) */
+    AdjustLEDs(0, 0);
   }
   else  {
     AdjustLEDs(0, 0);
-    AdjustLEDs(0, 2);
+    AdjustLEDs(0, 1);
   }
 
   // ONBOARD THERMOMETER
@@ -421,11 +421,11 @@ void RainbowLED(uint16_t Duration, uint8_t Rate)	{
   while(millis() < StartTime + Duration)	{
 
     if(HardwareVariant == 0 && LoadVariant == 0)  {
-      LP5009.SetLEDColor(BUILTIN_LED2, RValue, GValue, BValue);
-      LP5009.SetLEDBrightness(BUILTIN_LED2, BRIGHTNESS_VALUE_ON);
+      LP5009.SetLEDColor(BUILTIN_LED3, RValue, GValue, BValue);
+      LP5009.SetLEDBrightness(BUILTIN_LED3, BRIGHTNESS_VALUE_ON);
     }
     else {
-      uint8_t LEDs[2] = {BUILTIN_LED0, BUILTIN_LED1};
+      uint8_t LEDs[2] = {BUILTIN_LED1, BUILTIN_LED2};
       for(int i=0; i<2; i++)  {
         LP5009.SetLEDColor(LEDs[i], RValue, GValue, BValue);
         LP5009.SetLEDBrightness(LEDs[i], BRIGHTNESS_VALUE_ON);
@@ -458,10 +458,10 @@ void AdjustLEDs(uint8_t State, uint8_t Button) {
 
   //uint8_t LED2 = LED == 0 ? 2 : 0;
   if(HardwareVariant == 0 && LoadVariant == 0)  {
-    LED = BUILTIN_LED2;
+    LED = BUILTIN_LED3;
   }
   else  {
-    LED = Button == 0 ? BUILTIN_LED0 : BUILTIN_LED1;
+    LED = Button == 0 ? BUILTIN_LED1 : BUILTIN_LED2;
   }
 
   switch(State) {
@@ -597,12 +597,19 @@ void ETUpdate()  {
 }
 
 /*  *******************************************************************************************
-                                        Universal Input
+                                        IO Update
  *  *******************************************************************************************/
 void IOUpdate() {
 
   int FirstSensor = 0;
-  int Iterations = NUMBER_OF_RELAYS+NUMBER_OF_INPUTS;
+  int Iterations;
+
+  if(HardwareVariant == 0 && LoadVariant == 0)  {
+    Iterations = 1;
+  }
+  else  {
+    Iterations = 2;
+  }
 
   if (Iterations > 0)  {
     for (int i = FirstSensor; i < FirstSensor + Iterations; i++)  {
@@ -629,6 +636,8 @@ void IOUpdate() {
                     AdjustLEDs(IO[i].NewState, 0);
                     IO[i].NewState = IO[i].OldState;
                     AdjustLEDs(IO[i].NewState, 0);
+                    int j = i == 0 ? 1 : 0;
+                    AdjustLEDs(IO[j].NewState, j);
                   }
                 #endif  
               }
@@ -687,6 +696,10 @@ void IOUpdate() {
                 AdjustLEDs(IO[i].NewState, i);
                 IO[i].NewState = IO[i].OldState;
                 AdjustLEDs(IO[i].NewState, i);
+                if(LoadVariant != 0)  {
+                  int j = i == 0 ? 1 : 0;
+                  AdjustLEDs(IO[j].NewState, j);
+                }
               #endif
             }
             break;
@@ -886,9 +899,7 @@ void loop() {
   }
 
   // Reading inputs / activating outputs
-  if (NUMBER_OF_RELAYS + NUMBER_OF_INPUTS > 0) {
     IOUpdate();
-  }
 
   // Updating roller shutter
   #ifdef ROLLER_SHUTTER

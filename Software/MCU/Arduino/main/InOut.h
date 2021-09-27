@@ -21,7 +21,7 @@ class InOut
     void SetRelay();
 
   private:
-    uint16_t _TouchReference;
+    int _TouchReference;
     uint8_t _RelayPin;
     uint8_t _SensorPin;
     uint8_t _SensorPin2;

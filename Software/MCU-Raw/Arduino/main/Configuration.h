@@ -11,19 +11,19 @@
 
 // Builtin LEDs
 // LED1
-#define LED_PIN_1 1
+#define LED_PIN_1 3
 #define LED_PIN_2 2
-#define LED_PIN_3 3
+#define LED_PIN_3 1
 
 // LED2
-#define LED_PIN_4 0
-#define LED_PIN_5 5
-#define LED_PIN_6 6
+#define LED_PIN_4 11
+#define LED_PIN_5 9
+#define LED_PIN_6 10
 
 // LED3
-#define LED_PIN_7 9
-#define LED_PIN_8 10
-#define LED_PIN_9 11
+#define LED_PIN_7 5
+#define LED_PIN_8 6
+#define LED_PIN_9 0
 
 // Analog pins
 #define ANALOG_PIN_1 A0
@@ -31,15 +31,15 @@
 #define ANALOG_PIN_3 A2
 
 // Dip switches
-#define DIP_SWITCH_1 A3
-#define DIP_SWITCH_2 A4
-#define DIP_SWITCH_3 A6
-#define DIP_SWITCH_4 A7
+#define DIP_SWITCH_1 A4
+#define DIP_SWITCH_2 A3
+#define DIP_SWITCH_3 A7
+#define DIP_SWITCH_4 A6
 
 
 /* Quick config */
-#define SINGLE_RELAY
-//#define DOUBLE_RELAY
+//#define SINGLE_RELAY
+#define DOUBLE_RELAY
 
 
 /* Basic definitions */
@@ -53,21 +53,21 @@
 
 // Reading inputs
 #define TOUCH_THRESHOLD 5                   // A threshold to determine if it was a touch what was sensed (default 5)
-#define DEBOUNCE_VALUE 20                   // Debounce time in ms (1 - no debounce, >1 active debounce, default 20, max. 255)
+#define DEBOUNCE_VALUE 30                   // Debounce time in ms (1 - no debounce, >1 active debounce, default 20, max. 255)
 #define LONGPRESS_DURATION 1000             // Duration of longpress in ms (default 1000, max. 65535)
 
 // Builtin LEDs
 #define NUMBER_OF_CHANNELS 3                // RGB LEDs
 #define DIMMING_STEP 10                     // Size of dimming step, increase for faster, less smooth dimming (default 1)
 #define DIMMING_INTERVAL 1                  // Duration of dimming interval, increase for slower dimming (default 10)
-#define R_VALUE_OFF 0
+#define R_VALUE_OFF 255                     // 255 - OFF, 0 - Full ON
 #define G_VALUE_OFF 128
-#define B_VALUE_OFF 255
-#define R_VALUE_ON 255
+#define B_VALUE_OFF 0
+#define R_VALUE_ON 0
 #define G_VALUE_ON 128
-#define B_VALUE_ON 0
-#define BRIGHTNESS_VALUE_OFF 20
-#define BRIGHTNESS_VALUE_ON 40
+#define B_VALUE_ON 255
+#define BRIGHTNESS_VALUE_OFF 100            // Global brightness value should always be set to 100
+#define BRIGHTNESS_VALUE_ON 100
 #define INIT_RAINBOW_DURATION 1000          // Duration of initial rainbow effect (0-65535, default 1000)
 #define INIT_RAINBOW_RATE 1                 // Rate of initial reainbow effect (0-255, default 1)
 
@@ -80,14 +80,14 @@
 
 /* OUTPUT Config */
 #define RELAY_PIN_1 DIGITAL_PIN_3
-#define RELAY_PIN_2 DIGITAL_PIN_4
+#define RELAY_PIN_2 DIGITAL_PIN_2
 #define TOUCH_FIELD_1 ANALOG_PIN_1
 #define TOUCH_FIELD_2 ANALOG_PIN_2
 #define TOUCH_FIELD_3 ANALOG_PIN_3
-#define INPUT_PIN_1 DIGITAL_PIN_1
-#define INPUT_PIN_2 DIGITAL_PIN_2
-#define BUTTON_LED_1 LED0
-#define BUTTON_LED_2 LED2
+#define INPUT_PIN_1 DIGITAL_PIN_4
+#define INPUT_PIN_2 DIGITAL_PIN_1
+//#define BUTTON_LED_1 LED0
+//#define BUTTON_LED_2 LED2
 #define NUMBER_OF_RELAYS 2
 
 

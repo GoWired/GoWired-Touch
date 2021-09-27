@@ -37,16 +37,16 @@ void InOut::SetValues(bool RelayOFF, bool RelayON, uint8_t Type, uint8_t Pin1, u
   _TouchReference = ADCTouch.read(_SensorPin, 500);
 }
 
-void InOut::ReadInput(uint16_t Threshold, /*uint16_t LongpressDuration,*/ uint8_t DebounceValue, bool Monostable)  {
+void InOut::ReadInput(uint16_t Threshold, uint8_t DebounceValue, bool Monostable)  {
 
   bool ExternalButtonState = true;
   bool LowStateDetection = false;
-  //bool Condition = false;
-  uint16_t Value;
+  int Value;
   uint32_t StartTime = millis();
   
   do {
-    Value = ADCTouch.read(_SensorPin) - _TouchReference;
+    Value = ADCTouch.read(_SensorPin, 20);
+    Value -= - _TouchReference;
 
     if(SensorType == 1) {
       ExternalButtonState = digitalRead(_SensorPin2);
@@ -55,11 +55,6 @@ void InOut::ReadInput(uint16_t Threshold, /*uint16_t LongpressDuration,*/ uint8_
     if(millis() - StartTime > DebounceValue) {
       LowStateDetection = true;
     }
-
-    /*if(millis() - StartTime > LongpressDuration) {
-      Condition = true;
-      break;
-    }*/
 
     if(Monostable)  {
       if(LowStateDetection && !NewState) {
@@ -79,60 +74,12 @@ void InOut::ReadInput(uint16_t Threshold, /*uint16_t LongpressDuration,*/ uint8_
     }
   }
   else  {
-    NewState = 0;
-    SetRelay();
-  }
-  /*if(!Condition && LowStateDetection)  {
-    NewState = OldState == 1 ? 0 : 1;
-  }
-  else if(Condition) {
-    NewState = 2;
-  }*/
-}
-
-/*// Check digital input
-void InOut::DigitalInput()  {
-
-  if(digitalRead(_SensorPin2) != LOW) {
-    _HighStateDetection = true;
-    _LowStateDetection = false;
-    _Condition = false;
-  }
-  else  {
-    if(_HighStateDetection == true) {
-      _LowStateDetection = true;
+    if(NewState)  {
+      NewState = 0;
+      SetRelay();
     }
-  }
-  if(_LowStateDetection == true)  {
-    NewState = !OldState;
   }
 }
-
-// Check analog input
-void InOut::AnalogInput(uint16_t Threshold, bool Monostable) {
-  
-  bool ButtonPressed = false;
-  uint16_t Value = ADCTouch.read(_SensorPin);
-  Value -= _TouchReference;
-
-  if(Value > Threshold) {
-    ButtonPressed = true;
-  }
-
-  if(Monostable != true)  {
-    if(ButtonPressed == true) {
-      NewState = !OldState;
-    }
-    else  {
-      if(ButtonPressed == true) {
-        NewState = 1;
-      }
-      else  {
-        NewState = 0;
-      }
-    }
-  }
-}*/
 
 // Set Relay
 void InOut::SetRelay() {
