@@ -215,7 +215,7 @@ void UpdateIO() {
 
   for(int i=0; i<HardwareVariant; i++)  {
     IO[i].ReadInput(TOUCH_THRESHOLD, /*LONGPRESS_DURATION,*/ DEBOUNCE_VALUE, Monostable);
-    if(IO[i].NewState != IO[0].OldState)  {
+    if(IO[i].NewState != IO[i].OldState)  {
       if(RollerShutter) {
         if(IO[0].OldState || IO[1].OldState)  {
           // Stop
