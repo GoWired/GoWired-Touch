@@ -30,8 +30,8 @@ InOut IO[NUMBER_OF_BUTTONS];
 
 Dimmer D[NUMBER_OF_BUTTONS];
 
-// Before
-void before() {
+// Setup
+void setup()  {
 
   #ifdef ENABLE_WATCHDOG
     wdt_reset();
@@ -39,35 +39,9 @@ void before() {
     wdt_disable();
   #endif
 
-}
-
-// Setup
-void setup()  {
+  delay(2000);
 
   //float Vcc = ReadVcc();  // mV
-
-  // Temporary code to substitute hardware variant detection
-  #ifdef SINGLE_RELAY
-    HardwareVariant = 1;
-  #elif defined(DOUBLE_RELAY)
-    HardwareVariant = 2;
-  #endif
-
-  // Hardware auto detection
-  /*uint16_t ADCValue = analogRead(VERSION_DETECT_PIN);
-
-  // Version A - 1 relay, 1 button
-  if(ADCValue < 20) {
-    Version = 1;  
-  }
-  // Version B - 2 relays, 2 buttons
-  else if(ADCValue > 20 && ADCValue < 30)  {
-    Version = 2;  
-  }
-  // Version DC - 2 open collector outputs
-  else if(ADC > 30 && ADCValue < 40)  {
-    Version = 3;
-  }*/
 
   pinMode(DIP_SWITCH_1, INPUT_PULLUP);
   pinMode(DIP_SWITCH_2, INPUT_PULLUP);
@@ -78,9 +52,10 @@ void setup()  {
 
   // Reading dip switch 1
   if(!digitalRead(DIP_SWITCH_1)) {
-    if(HardwareVariant == 2)  {
-      RollerShutter = true;
-    }
+    HardwareVariant = 1;
+  }
+  else  {
+    HardwareVariant = 2;
   }
 
   // Reading dip switch 2
@@ -90,6 +65,13 @@ void setup()  {
 
   // Reading dip switch 3
   if(!digitalRead(DIP_SWITCH_3)) {
+    if(HardwareVariant == 2)  {
+      RollerShutter = true;
+    }
+  }
+
+  // Reading dip switch 4
+  if(!digitalRead(DIP_SWITCH_4)) {
     if(!Monostable && !RollerShutter) {
       RememberStates = true;
       uint8_t RecoveredState;
@@ -100,13 +82,6 @@ void setup()  {
         }
       }      
     }
-  }
-
-  // Reading dip switch 4
-  if(!digitalRead(DIP_SWITCH_4)) {
-    // clear eeprom
-    // clear load variant, eeprom states
-    // for future use
   }
 
   // One button variant
@@ -215,7 +190,7 @@ void UpdateIO() {
 
   for(int i=0; i<HardwareVariant; i++)  {
     IO[i].ReadInput(TOUCH_THRESHOLD, /*LONGPRESS_DURATION,*/ DEBOUNCE_VALUE, Monostable);
-    if(IO[i].NewState != IO[0].OldState)  {
+    if(IO[i].NewState != IO[i].OldState)  {
       if(RollerShutter) {
         if(IO[0].OldState || IO[1].OldState)  {
           // Stop

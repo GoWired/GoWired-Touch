@@ -31,10 +31,10 @@
 #define ANALOG_PIN_3 A2
 
 // Dip switches
-#define DIP_SWITCH_1 A4
-#define DIP_SWITCH_2 A3
-#define DIP_SWITCH_3 A7
-#define DIP_SWITCH_4 A6
+#define DIP_SWITCH_1 A6
+#define DIP_SWITCH_2 A7
+#define DIP_SWITCH_3 A3
+#define DIP_SWITCH_4 A4
 
 
 /* Quick config */
@@ -52,8 +52,8 @@
 #define NUMBER_OF_BUTTONS 2                 // Determined by hardware
 
 // Reading inputs
-#define TOUCH_THRESHOLD 5                   // A threshold to determine if it was a touch what was sensed (default 5)
-#define DEBOUNCE_VALUE 30                   // Debounce time in ms (1 - no debounce, >1 active debounce, default 20, max. 255)
+#define TOUCH_THRESHOLD 10                   // A threshold to determine if it was a touch what was sensed (default 5)
+#define DEBOUNCE_VALUE 50                   // Debounce time in ms (1 - no debounce, >1 active debounce, default 20, max. 255)
 #define LONGPRESS_DURATION 1000             // Duration of longpress in ms (default 1000, max. 65535)
 
 // Builtin LEDs
@@ -75,7 +75,7 @@
 #define RS_INTERVAL 80                 // Time in seconds to turn off roller shutter after it was turned on (deafult 80)
 
 // Other
-#define LOOP_TIME 80                        // Main loop wait time (default 100)
+#define LOOP_TIME 100                        // Main loop wait time (default 100)
 
 
 /* OUTPUT Config */
@@ -84,8 +84,8 @@
 #define TOUCH_FIELD_1 ANALOG_PIN_1
 #define TOUCH_FIELD_2 ANALOG_PIN_2
 #define TOUCH_FIELD_3 ANALOG_PIN_3
-#define INPUT_PIN_1 DIGITAL_PIN_4
-#define INPUT_PIN_2 DIGITAL_PIN_1
+#define INPUT_PIN_1 DIGITAL_PIN_1
+#define INPUT_PIN_2 DIGITAL_PIN_4
 //#define BUTTON_LED_1 LED0
 //#define BUTTON_LED_2 LED2
 #define NUMBER_OF_RELAYS 2

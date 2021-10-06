@@ -46,7 +46,7 @@ void InOut::ReadInput(uint16_t Threshold, uint8_t DebounceValue, bool Monostable
   
   do {
     Value = ADCTouch.read(_SensorPin, 20);
-    Value -= - _TouchReference;
+    Value -= _TouchReference;
 
     if(SensorType == 1) {
       ExternalButtonState = digitalRead(_SensorPin2);
@@ -66,7 +66,7 @@ void InOut::ReadInput(uint16_t Threshold, uint8_t DebounceValue, bool Monostable
     if(millis() < StartTime)  {
       StartTime = millis();
     }
-  } while(!ExternalButtonState || Value > Threshold);
+  } while(!ExternalButtonState || (Value > Threshold));
 
   if(!Monostable) {
     if(LowStateDetection) {
