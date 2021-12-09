@@ -74,7 +74,7 @@
  *  *******************************************************************************************/
 // Output Config - one of these has to be defined
 //#define SINGLE_RELAY
-#define DOUBLE_RELAY              // Define this node as a double relay node, setting below
+//#define DOUBLE_RELAY              // Define this node as a double relay node, setting below
 //#define ROLLER_SHUTTER            // Define this node as a roller shutter node, setting below
 //#define DIMMER                    // Define this node as a 1-channel dimmer node, setting below
 //#define RGB                       // Define this node as a RGB dimmer node, setting below
@@ -97,9 +97,10 @@
 #define HARDWARE_DETECTION_PIN ANALOG_PIN_5 // Pin to determina Hardware variant of shield
 
 // Reading inputs
-#define TOUCH_THRESHOLD 5                   // A threshold to determine if it was a touch what was sensed (default 5, max. 65535)
+#define TOUCH_THRESHOLD 10                  // A threshold to determine if it was a touch what was sensed (default 5, max. 65535)
 #define DEBOUNCE_VALUE 20                   // Debounce time in ms (1 - no debounce, >1 active debounce, default 20, max. 255)
 #define LONGPRESS_DURATION 1000             // Duration of longpress in ms (default 1000, max. 65535)
+#define TOUCH_DIAG_TRESHOLD 10              // 
 
 // Power Sensor
 #define MAX_CURRENT 10                      // Maximum current the module can handle before reporting error (2SSR - 3; 4RelayDin - 10A or 16)
@@ -114,14 +115,11 @@
 #define DIMMING_TOGGLE_STEP 20              // Value to increase dimming percentage when using wall switch
 
 // Roller Shutter
-#define RS_AUTO_CALIBRATION                 // Roller shutter auto-calibration. Leave it defined or comment it out and define movement times manually
-#ifdef RS_AUTO_CALIBRATION
-  #define PS_OFFSET 0.2                     // Power sensor offset for roller shutter calibration (default 0.2)
-  #define CALIBRATION_SAMPLES 2             // Number of calibration samples for roller shutter calibration (default 2)
-#else
-  #define UP_TIME 21                        // Manually defined upward movement time in seconds (0-255)
-  #define DOWN_TIME 20                      // Manually defined downward movement time in seconds (0-255)
-#endif
+//#define RS_AUTO_CALIBRATION                 // Roller shutter auto-calibration. Leave it defined or comment it out and define movement times manually
+#define PS_OFFSET 0.2                     // Power sensor offset for roller shutter calibration (default 0.2)
+#define CALIBRATION_SAMPLES 2             // Number of calibration samples for roller shutter calibration (default 2)
+#define UP_TIME 21                        // Manually defined upward movement time in seconds (0-255)
+#define DOWN_TIME 20                      // Manually defined downward movement time in seconds (0-255)
 
 // LP5009
 #define R_VALUE_OFF 0
@@ -212,10 +210,22 @@
   #define ETS_ID 11
 #endif
 
+#define TOUCH_AUTO_DIAGNOSTICS
+
 //#define RS485_DEBUG
 #ifdef RS485_DEBUG
+  // Report text debug
   #define DEBUG_ID 12
+  // Reporting touch readings
+  #define TOUCH_DIAGNOSTIC_ID 13
 #endif
+
+/*  *******************************************************************************************
+                      SECRET CONFIGURATION
+ *  *******************************************************************************************/
+#define SECRET_CONFIG_ID_1 20
+#define SECRET_CONFIG_ID_2 21
+#define SECRET_CONFIG_ID_3 22
 
 /*  *******************************************************************************************
                     EEPROM Definitions

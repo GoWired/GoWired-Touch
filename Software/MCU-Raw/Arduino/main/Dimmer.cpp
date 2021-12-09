@@ -16,7 +16,7 @@ void Dimmer::SetValues(uint8_t NumberOfChannels, uint8_t DimmingStep, uint8_t Di
 
   uint8_t Channels[4] = {Pin1, Pin2, Pin3, Pin4};
 
-  for(int i=0; i<4; i++)  {
+  for(int i=0; i<_NumberOfChannels; i++)  {
     _Channels[i] = Channels[i];
   }
 }

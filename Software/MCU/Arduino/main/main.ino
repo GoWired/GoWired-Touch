@@ -49,9 +49,10 @@
 // General
 // 0 - 2Relay; 1 - RGBW
 uint8_t HardwareVariant;
-// HardwareVariant == 0: 0 - 1 relay; 1 - 2 relays; 2 - roller shutter
-// HardwareVariant == 1: 0 - dimmer; 1 - rgb; 2 - rgbw
+// HardwareVariant = 0: LoadVariant=> 0 - 1 relay; 1 - 2 relays; 2 - roller shutter
+// HardwareVariant = 1: LoadVariant=> 0 - rgb; 1 - rgbw; 2 - 1-channel dimmer
 uint8_t LoadVariant;
+uint8_t Iterations;
 
 // RShutter
 uint32_t MovementTime;
@@ -69,36 +70,39 @@ bool ET_ERROR = 0;                       // External thermometer status (0 - ok,
 // Initialization
 bool InitConfirm = false;
 
+// Touch Diagnosis
+int TouchValueAggregated[2];
+uint8_t LimitTransgressions = 0;
+
 /*  *******************************************************************************************
                                         Constructors
  *  *******************************************************************************************/
 // LP5009 - onboard RGB LED controller
 LP50XX LP5009(BGR, LP5009_ENABLE_PIN);
 
-//Universal input constructor
+// InOut class constructor
 InOut IO[NUMBER_OF_RELAYS+NUMBER_OF_INPUTS];
 
-// RShutter Control Constructor
+// RShutterControl class Constructor
 RShutterControl RS(RELAY_PIN_1, RELAY_PIN_2, RELAY_ON, RELAY_OFF);
 
-// Dimmer
+// Dimmer class constructor
 Dimmer Dimmer;
 
-// Power sensor
+// Power sensor class constructor
 #if defined(POWER_SENSOR)
   PowerSensor PS;
   MyMessage MsgWATT(0, V_WATT);
 #endif
 
-// Onboard thermometer
+// SHTSensor class constructor
 #ifdef SHT30
   SHTSensor sht;
   MyMessage MsgTEMP(0, V_TEMP);
   MyMessage MsgHUM(0, V_HUM);
 #endif
 
-// Messages
-// Rename all messages objects into Msg<TYPE>, eg. MsgSTATUS
+// Protocol messages constructors
 MyMessage MsgSTATUS(0, V_STATUS);
 MyMessage MsgUP(0, V_UP);
 MyMessage MsgDOWN(0, V_DOWN);
@@ -110,6 +114,7 @@ MyMessage MsgRGBW(0, V_RGBW);
 // Debug
 #ifdef RS485_DEBUG
   MyMessage MsgTEXT(0, V_TEXT);
+  MyMessage MsgVAR1(0, V_VAR1);
 #endif
 
 /*  *******************************************************************************************
@@ -133,25 +138,63 @@ void before() {
  *  *******************************************************************************************/
 void setup() {
 
-  #ifdef SINGLE_RELAY
-    HardwareVariant = 0; LoadVariant = 0;
-  #elif defined(DOUBLE_RELAY)
-    HardwareVariant = 0;  LoadVariant = 1;
-  #elif defined(ROLLER_SHUTTER)
-    HardwareVariant = 0;  LoadVariant = 2;
-  #elif defined(DIMMER)
-    HardwareVariant = 1;  LoadVariant = 0;
-  #elif defined(RGB)
-    HardwareVariant = 1;  LoadVariant = 1;
-  #elif defined(RGBW)
-    HardwareVariant = 1;  LoadVariant = 2;
-  #endif
+  // Resistive hardware detection
+  pinMode(HARDWARE_DETECTION_PIN, INPUT_PULLUP);
+  delay(100);
 
+  uint16_t ReadHardware = analogRead(HARDWARE_DETECTION_PIN);
+
+  if(ReadHardware < 20) {
+    // Hardware variant: 2Relay Board
+    HardwareVariant = 0;
+  }
+  else if(ReadHardware < 40)  {
+    // Hardware variant: RGBW Board
+    HardwareVariant = 1;
+  }
+  else  {/* Handling error */}
+
+  // Reading dip switches, determining load variant
+  pinMode(DIP_SWITCH_1, INPUT_PULLUP);
+  pinMode(DIP_SWITCH_2, INPUT_PULLUP);
+  pinMode(DIP_SWITCH_3, INPUT_PULLUP);
+
+  delay(100);
+
+  if(digitalRead(DIP_SWITCH_1) == false) {
+    // DIP SWITCH 1 ON
+    // HardwareVariant 0: roller shutter; HardwareVariant 1: Dimmer 
+    LoadVariant = 2;
+  }
+  else  {
+    if(digitalRead(DIP_SWITCH_2) == false)  {
+      // DIP SWITCH 2 ON
+      // HardwareVariant 0: single switch; HardwareVariant 1: RGB
+      LoadVariant = 0;
+    }
+    else  {
+      // Default option - DIP SWITCH 1 & DIP SWITCH 2 OFF
+      // HardwareVariant 0: double switch; HardwareVariant 1: RGBW
+      LoadVariant = 1;
+    }
+  }
+
+  if(digitalRead(DIP_SWITCH_3) == false) {
+    // Saving States to EEPROM
+    // TO BE DEVELOPED
+  }
+
+  // Calculating number of iterations depending from IO instances
+  Iterations = (HardwareVariant == 0 && LoadVariant == 0) ? 1 : 2;
+
+  // Detecting I2C peripherals
   Wire.begin();
+  // TO BE DEVELOPED
 
   // Support for 400kHz available
   //Wire.setClock(400000UL);
 
+  // Initializing LP5009/LP5012
   LP5009.Begin();
 
   // LED: 0 || 1 || 2; R,G,B: 0-255, brightness: 0-255
@@ -164,54 +207,50 @@ void setup() {
 
   float Vcc = ReadVcc();  // mV
 
-  // POWER SENSOR
+  // Initializing POWER SENSOR
   #if defined(POWER_SENSOR)
     PS.SetValues(PS_PIN, MVPERAMP, RECEIVER_VOLTAGE, MAX_CURRENT, POWER_MEASURING_TIME, Vcc);
   #endif
 
+  // Initializing inputs & outputs
   if(HardwareVariant == 0)  {
     if(LoadVariant == 0)  {
-      // One button, one relay
+      // Lighting: One button, single output
       IO[RELAY_ID_1].SetValues(RELAY_OFF, RELAY_ON, 1, TOUCH_FIELD_3, INPUT_PIN_1, RELAY_PIN_1);
     }
     else if(LoadVariant == 1) {
-      // Two buttons, two relays
+      // Lighting: two buttons, double output
       IO[RELAY_ID_1].SetValues(RELAY_OFF, RELAY_ON, 1, TOUCH_FIELD_1, INPUT_PIN_1, RELAY_PIN_1);
       IO[RELAY_ID_2].SetValues(RELAY_OFF, RELAY_ON, 1, TOUCH_FIELD_2, INPUT_PIN_2, RELAY_PIN_2);
     }
     else if(LoadVariant == 2) {
-      // Two buttons, roller shutter
+      // Roller shutter
       IO[RS_ID].SetValues(RELAY_OFF, RELAY_ON, 1, TOUCH_FIELD_1, INPUT_PIN_1, RELAY_PIN_1);
       IO[RS_ID + 1].SetValues(RELAY_OFF, RELAY_ON, 1, TOUCH_FIELD_2, INPUT_PIN_2, RELAY_PIN_2);
-      if(!RS.Calibrated)  {
-        #ifdef RS_AUTO_CALIBRATION
-          RSCalibration(Vcc);
-        #else
-          RS.Calibration(UP_TIME, DOWN_TIME);
-        #endif
-      }
+      // Temporary calibration
+      RS.Calibration(UP_TIME, DOWN_TIME);
     }
   }
   else if(HardwareVariant == 1) {
-    if(LoadVariant == 0)  {
-      // One channel dimmer
+    if(LoadVariant == 2)  {
+      // 1-channel dimmer
       Dimmer.SetValues(NUMBER_OF_CHANNELS, DIMMING_STEP, DIMMING_INTERVAL, LED_PIN_W);
     }
-    else if(LoadVariant == 1) {
+    else if(LoadVariant == 0) {
       // RGB dimmer
       Dimmer.SetValues(NUMBER_OF_CHANNELS, DIMMING_STEP, DIMMING_INTERVAL, LED_PIN_R, LED_PIN_G, LED_PIN_B);
     }
-    else if(LoadVariant == 2) {
+    else if(LoadVariant == 1) {
       // RGBW dimmer
       Dimmer.SetValues(NUMBER_OF_CHANNELS, DIMMING_STEP, DIMMING_INTERVAL, LED_PIN_R, LED_PIN_G, LED_PIN_B, LED_PIN_W);
     }
     // Every dimmer has two buttons
     IO[0].SetValues(RELAY_OFF, RELAY_ON, 0, TOUCH_FIELD_1);
-    IO[1].SetValues(RELAY_OFF, RELAY_ON, 0, TOUCH_FIELD_2); 
+    IO[1].SetValues(RELAY_OFF, RELAY_ON, 0, TOUCH_FIELD_2);
   }
 
   if(HardwareVariant == 0 && LoadVariant == 0)  {
-    /* AdjustLEDs(State [0 - OFF, 1 - ON, 2 - Rainbow], Button [0 or 1) */
+    /* AdjustLEDs(State [0 - OFF, 1 - ON, 2 - Rainbow], Button [0 or 1] */
     AdjustLEDs(0, 0);
   }
   else  {
@@ -221,7 +260,6 @@ void setup() {
 
   // ONBOARD THERMOMETER
   #ifdef SHT30
-    Wire.begin();
     sht.init();
     sht.setAccuracy(SHTSensor::SHT_ACCURACY_MEDIUM);
   #endif
@@ -254,13 +292,13 @@ void presentation() {
     }
   }
   else if(HardwareVariant == 1) {
-    if(LoadVariant == 0)  {
+    if(LoadVariant == 2)  {
       present(DIMMER_ID, S_DIMMER, "Dimmer"); wait(PRESENTATION_DELAY);
     }
-    else if(LoadVariant == 1) {
+    else if(LoadVariant == 0) {
       present(DIMMER_ID, S_RGB_LIGHT, "RGB"); wait(PRESENTATION_DELAY);
     }
-    else if(LoadVariant == 2) {
+    else if(LoadVariant == 1) {
       present(DIMMER_ID, S_RGBW_LIGHT, "RGBW");   wait(PRESENTATION_DELAY);
     }
   }
@@ -291,6 +329,7 @@ void presentation() {
 
   #ifdef RS485_DEBUG
     present(DEBUG_ID, S_INFO, "DEBUG INFO");
+    present(TOUCH_DIAGNOSTIC_ID, S_DISTANCE, "Touch Diagnostic");
   #endif
 
 }
@@ -340,7 +379,7 @@ void InitConfirmation() {
   }
   // RGBW
   else if(HardwareVariant == 1) {
-    // 1-channel dimmer
+    // RGB dimmer
     if(LoadVariant == 0)  {
       send(MsgSTATUS.setSensor(DIMMER_ID).set(false));
       request(DIMMER_ID, V_STATUS);
@@ -349,22 +388,13 @@ void InitConfirmation() {
       send(MsgPERCENTAGE.setSensor(DIMMER_ID).set(0));
       request(DIMMER_ID, V_PERCENTAGE);
       wait(2000, C_SET, V_PERCENTAGE);
-    }
-    // RGB dimmer
-    else if(LoadVariant == 1) {
-      send(MsgSTATUS.setSensor(DIMMER_ID).set(false));
-      request(DIMMER_ID, V_STATUS);
-      wait(2000, C_SET, V_STATUS);
-
-      send(MsgPERCENTAGE.setSensor(DIMMER_ID).set(0));
-      request(DIMMER_ID, V_PERCENTAGE);
-      wait(2000, C_SET, V_PERCENTAGE);
 
       send(MsgRGB.setSensor(DIMMER_ID).set("000000"));
       request(DIMMER_ID, V_RGB);
       wait(2000, C_SET, V_RGB);
     }
-    else if(LoadVariant == 2) {
+    // RGBW dimmer
+    else if(LoadVariant == 1) {
       send(MsgSTATUS.setSensor(DIMMER_ID).set(false));
       request(DIMMER_ID, V_STATUS);
       wait(2000, C_SET, V_STATUS);
@@ -376,6 +406,16 @@ void InitConfirmation() {
       send(MsgRGBW.setSensor(DIMMER_ID).set("00000000"));
       request(DIMMER_ID, V_RGBW);
       wait(2000, C_SET, V_RGBW);
+    }
+    // 1-channel dimmer
+    else if(LoadVariant == 2) {
+      send(MsgSTATUS.setSensor(DIMMER_ID).set(false));
+      request(DIMMER_ID, V_STATUS);
+      wait(2000, C_SET, V_STATUS);
+
+      send(MsgPERCENTAGE.setSensor(DIMMER_ID).set(0));
+      request(DIMMER_ID, V_PERCENTAGE);
+      wait(2000, C_SET, V_PERCENTAGE);
     }
   }
 
@@ -401,6 +441,7 @@ void InitConfirmation() {
 
   #ifdef RS485_DEBUG
     send(MsgTEXT.setSensor(DEBUG_ID).set("DEBUG MESSAGE"));
+    send(MsgVAR1.setSensor(TOUCH_DIAGNOSTIC_ID).set(0));
   #endif
 
   InitConfirm = true;
@@ -451,12 +492,11 @@ void RainbowLED(uint16_t Duration, uint8_t Rate)	{
   }
 }
 
-// Adjust Builtin LEDs
+// Adjust builtin LEDs according to output states
 void AdjustLEDs(uint8_t State, uint8_t Button) {
 
   uint8_t LED;
 
-  //uint8_t LED2 = LED == 0 ? 2 : 0;
   if(HardwareVariant == 0 && LoadVariant == 0)  {
     LED = BUILTIN_LED3;
   }
@@ -481,19 +521,64 @@ void AdjustLEDs(uint8_t State, uint8_t Button) {
   }
 }
 
+// Adjust builtin LEDs by color & brightness
+void AdjustLEDs2(uint8_t LED, uint8_t Brightness, uint8_t R, uint8_t G, uint8_t B) {
+
+  // LED: BUILTIN_LED1 / BUILTIN_LED2 / BUILTIN_LED3
+  LP5009.SetLEDColor(LED, R, G, B);
+  LP5009.SetLEDBrightness(LED, Brightness);
+}
+
+// Touch diagnosis
+bool TouchDiagnosis(uint16_t Threshold) {
+
+  for(int i=0; i<Iterations; i++)  {
+    if(TouchValueAggregated[i] > (int)(Threshold / 2) || TouchValueAggregated[i] < -(int)(Threshold / 2))  {
+      
+      #ifdef RS485_DEBUG
+        // Send message with TouchValue
+        send(MsgVAR1.setSensor(TOUCH_DIAGNOSTIC_ID).set(TouchValueAggregated[i]));
+      #endif
+
+      if(TouchValueAggregated[i] < Threshold) {
+        LimitTransgressions++;
+      }
+    }
+  }
+}
+
+// Reading new reference for touch buttons
+void ReadNewReference() {
+
+  for(int i=0; i<Iterations; i++)  {
+    // Turn off LEDs
+    for(int j=1; j<4; j++)  {
+      LP5009.SetLEDBrightness(j, 0);
+    }
+    // Take a break from running
+    delay(1000);
+    // Read new reference
+    IO[i].ReadReference();
+    // Rainbow LED visual effect
+    RainbowLED(RAINBOW_DURATION, RAINBOW_RATE);
+    // Turn LEDs on
+    AdjustLEDs(IO[i].OldState, i);
+  }
+}
 
 /*  *******************************************************************************************
                                         MySensors Receive
  *  *******************************************************************************************/
 void receive(const MyMessage &message)  {
   
+  // Binary messages
   if (message.type == V_STATUS) {
     #ifdef SPECIAL_BUTTON
       if (message.sensor == SPECIAL_BUTTON_ID)  {
         // Ignore this message
       }
     #endif
-    #if defined(DIMMER) || defined(RGB) || defined(RGBW)
+    if(HardwareVariant == 1)  {
       if (message.sensor == DIMMER_ID) {
         Dimmer.NewState = message.getBool();
         for(int i=0; i<2; i++)  {
@@ -501,8 +586,8 @@ void receive(const MyMessage &message)  {
         }
         Dimmer.ChangeState();
       }
-    #endif
-    #if defined(SINGLE_RELAY) || defined(DOUBLE_RELAY)
+    }
+    if(HardwareVariant == 0 && LoadVariant != 2)  {
       if (message.sensor == RELAY_ID_1 || message.sensor == RELAY_ID_2)  {
         if (!OVERCURRENT_ERROR) {
           IO[message.sensor].NewState = message.getBool();
@@ -510,8 +595,15 @@ void receive(const MyMessage &message)  {
           AdjustLEDs(IO[message.sensor].NewState, message.sensor);
         }
       }
-    #endif
+    }
+    // Secret configuration
+    if(message.sensor == SECRET_CONFIG_ID_1)  {
+      // Roller shutter calibration
+      float Vcc = ReadVcc();
+      RSCalibration(Vcc);
+    }
   }
+  // Percentage messages
   else if (message.type == V_PERCENTAGE) {
     #ifdef ROLLER_SHUTTER
       if(message.sensor == RS_ID) {
@@ -537,6 +629,7 @@ void receive(const MyMessage &message)  {
       }
     #endif
   }
+  // RGB/RGBW messages
   else if (message.type == V_RGB || message.type == V_RGBW) {
     #if defined(RGB) || defined(RGBW)
       if(message.sensor == DIMMER_ID) {
@@ -551,6 +644,7 @@ void receive(const MyMessage &message)  {
       }
     #endif
   }
+  // Roller shutter control messages (UP, DOWN, STOP)
   else if(message.type == V_UP) {
     #ifdef ROLLER_SHUTTER
       if(message.sensor == RS_ID) {
@@ -601,19 +695,12 @@ void ETUpdate()  {
  *  *******************************************************************************************/
 void IOUpdate() {
 
-  int FirstSensor = 0;
-  int Iterations;
-
-  if(HardwareVariant == 0 && LoadVariant == 0)  {
-    Iterations = 1;
-  }
-  else  {
-    Iterations = 2;
-  }
+  uint8_t FirstSensor = 0;
+  uint8_t LongpressDetectionCount = 0; 
 
   if (Iterations > 0)  {
     for (int i = FirstSensor; i < FirstSensor + Iterations; i++)  {
-      IO[i].ReadInput(TOUCH_THRESHOLD, LONGPRESS_DURATION, DEBOUNCE_VALUE);
+      TouchValueAggregated[i] = IO[i].ReadInput(TOUCH_THRESHOLD, LONGPRESS_DURATION, DEBOUNCE_VALUE);
       if (IO[i].NewState != IO[i].OldState)  {
         switch(IO[i].SensorType)  {
           case 0:
@@ -632,12 +719,12 @@ void IOUpdate() {
                 }
                 #ifdef SPECIAL_BUTTON
                   if(IO[i].NewState == 2) {
-                    send(MsgSTATUS.setSensor(SPECIAL_BUTTON_ID).set(true));
                     AdjustLEDs(IO[i].NewState, 0);
                     IO[i].NewState = IO[i].OldState;
                     AdjustLEDs(IO[i].NewState, 0);
                     int j = i == 0 ? 1 : 0;
                     AdjustLEDs(IO[j].NewState, j);
+                    LongpressDetectionCount++;
                   }
                 #endif  
               }
@@ -692,7 +779,6 @@ void IOUpdate() {
             // Special button
             if(IO[i].NewState == 2) {
               #ifdef SPECIAL_BUTTON
-                send(MsgSTATUS.setSensor(SPECIAL_BUTTON_ID).set(true));
                 AdjustLEDs(IO[i].NewState, i);
                 IO[i].NewState = IO[i].OldState;
                 AdjustLEDs(IO[i].NewState, i);
@@ -700,6 +786,7 @@ void IOUpdate() {
                   int j = i == 0 ? 1 : 0;
                   AdjustLEDs(IO[j].NewState, j);
                 }
+                LongpressDetectionCount++;
               #endif
             }
             break;
@@ -709,6 +796,16 @@ void IOUpdate() {
         }
       }
     }
+    if(LongpressDetectionCount == 1)  {
+      #ifdef SPECIAL_BUTTON
+        send(MsgSTATUS.setSensor(SPECIAL_BUTTON_ID).set(true));
+      #endif
+    }
+    else if(LongpressDetectionCount > 1) {
+      #ifdef TOUCH_AUTO_DIAGNOSTICS
+        ReadNewReference();
+      #endif
+    }
   }
 }
 
@@ -716,8 +813,6 @@ void IOUpdate() {
                                     Roller Shutter Calibration
  *  *******************************************************************************************/
 void RSCalibration(float Vcc)  {
-
-  #if defined(ROLLER_SHUTTER) && defined(RS_AUTO_CALIBRATION)
 
   float Current = 0;
   uint16_t DownTimeCumulated = 0;
@@ -776,18 +871,15 @@ void RSCalibration(float Vcc)  {
   uint8_t DownTime = (int)(DownTimeCumulated / CALIBRATION_SAMPLES);
   uint8_t UpTime = (int)(UpTimeCumulated / CALIBRATION_SAMPLES);
 
-  RS.Calibration(UpTime, DownTime);
-
-  #endif
-    
+  if(DownTime > 1 && UpTime > 1)  {
+    RS.Calibration(UpTime, DownTime);
+  }
 }
 
 /*  *******************************************************************************************
                                         Roller Shutter
  *  *******************************************************************************************/
 void RSUpdate() {
-
-  #ifdef ROLLER_SHUTTER
 
   uint32_t StopTime = 0;
   uint32_t MeasuredTime;
@@ -845,8 +937,6 @@ void RSUpdate() {
   
     send(MsgPERCENTAGE.setSensor(RS_ID).set(RS.Position));
   }
-
-  #endif
 }
 
 /*  *******************************************************************************************
@@ -899,24 +989,38 @@ void loop() {
   }
 
   // Reading inputs / activating outputs
-    IOUpdate();
+  IOUpdate();
+
+  #ifdef TOUCH_AUTO_DIAGNOSTICS
+    // Checking if touch feature works correctly
+    TouchDiagnosis(TOUCH_THRESHOLD);
+
+    // Reading new touch reference if diagnosis shows that previous values were not correct
+    if(LimitTransgressions > TOUCH_DIAG_TRESHOLD)  {
+      ReadNewReference();
+      LimitTransgressions = 0;
+    }
+  #endif
 
   // Updating roller shutter
-  #ifdef ROLLER_SHUTTER
+  if(HardwareVariant == 0 && LoadVariant == 2)  {
     RSUpdate();
-  #endif
+  }
 
   // Reading power sensor(s)
   #ifdef POWER_SENSOR
-    #if defined(SINGLE_RELAY) || defined(DOUBLE_RELAY) || defined(ROLLER_SHUTTER)
+    // 2Relay Board
+    if(HardwareVariant == 0)  {
       if (digitalRead(RELAY_PIN_1) == RELAY_ON || digitalRead(RELAY_PIN_2) == RELAY_ON)  {
         Current = PS.MeasureAC(Vcc);
       }
-    #elif defined(DIMMER) || defined(RGB) || defined(RGBW)
+    }
+    // RGBW Board
+    if(HardwareVariant == 1)  {
       if (Dimmer.NewState)  {
         Current = PS.MeasureDC(Vcc);
       }
-    #endif
+    }
       
     #ifdef ERROR_REPORTING
       OVERCURRENT_ERROR = PS.ElectricalStatus(Current);
@@ -941,20 +1045,28 @@ void loop() {
   #if defined(ELECTRONIC_FUSE) && defined(POWER_SENSOR)
     if(OVERCURRENT_ERROR)  {
       // Current to high
-      #if defined(SINGLE_RELAY) || defined(DOUBLE_RELAY)
-        for (int i = RELAY_ID_1; i < RELAY_ID_1 + NUMBER_OF_RELAYS; i++)  {
-          IO[i].NewState = RELAY_OFF;
-          IO[i].SetRelay();
-          send(MsgSTATUS.setSensor(i).set(IO[i].NewState));
+      // Board: 2Relay 
+      if(HardwareVariant == 0)  {
+        // Load: Lighting
+        if(LoadVariant < 2) {
+          for (int i = RELAY_ID_1; i < RELAY_ID_1 + NUMBER_OF_RELAYS; i++)  {
+            IO[i].NewState = RELAY_OFF;
+            IO[i].SetRelay();
+            send(MsgSTATUS.setSensor(i).set(IO[i].NewState));
+          }
         }
-      #elif defined(ROLLER_SHUTTER)
-        RS.NewState = 2;
-        RSUpdate();
-      #elif defined(DIMMER) || defined(RGB) || defined(RGBW)
+        // Load: Roller shutter
+        else if(LoadVariant == 2) {
+          RS.NewState = 2;
+          RSUpdate();
+        }
+      }
+      // Board: RGBW
+      else if(HardwareVariant == 1) {
         Dimmer.NewState = false;
         Dimmer.ChangeState();
         send(MsgSTATUS.setSensor(DIMMER_ID).set(Dimmer.NewState));
-      #endif
+      }
       send(MsgSTATUS.setSensor(ES_ID).set(OVERCURRENT_ERROR));
       InformControllerES = true;
     }
@@ -975,6 +1087,7 @@ void loop() {
     #ifdef SHT30
       ETUpdate();
     #endif
+    LimitTransgressions = 0;
     LastUpdate = millis();
     CheckNow = false;
   }
