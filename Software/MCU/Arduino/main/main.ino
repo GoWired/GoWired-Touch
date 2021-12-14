@@ -128,7 +128,14 @@ void before() {
     wdt_disable();
   #endif
 
-  uint32_t InitDelay = MY_NODE_ID * INIT_DELAY;
+  uint32_t InitDelay;
+
+  if(_nodeId != AUTO) {
+    InitDelay = _nodeId * INIT_DELAY;
+  }
+  else  {
+    InitDelay = 0;
+  }
   
   wait(InitDelay);
 }

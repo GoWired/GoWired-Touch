@@ -52,7 +52,7 @@
                     MySensors Definitions
  *  *******************************************************************************************/
 // Identification
-#define MY_NODE_ID 10                            // Set node ID
+#define MY_NODE_ID AUTO                            // Set node ID
 #define SN "GoWired Touch Module"               // Set node name to present to a controller
 #define SV "1.0"                                // Set sensor version
 
