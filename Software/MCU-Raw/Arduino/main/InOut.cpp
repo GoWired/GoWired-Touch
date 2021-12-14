@@ -28,6 +28,11 @@ void InOut::SetValues(bool RelayOFF, bool RelayON, uint8_t Type, uint8_t Pin1, u
       pinMode(_RelayPin, OUTPUT);
       digitalWrite(_RelayPin, _RelayOFF);
       break;
+    case 2:
+      _SensorPin = Pin1;
+      _RelayPin = Pin2;
+      pinMode(_RelayPin, OUTPUT);
+      digitalWrite(_RelayPin, _RelayOFF);
     // Default case
     default:
       break;

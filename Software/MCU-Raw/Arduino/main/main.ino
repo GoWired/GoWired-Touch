@@ -13,7 +13,8 @@
 
 // Globals
 // 1 - 1 output; 2 - 2 outputs
-uint8_t HardwareVariant;                    // Auto detecting connected hardware
+uint8_t HardwareVariant;                    // Variant of connected hardware: 0 - Power Board AC, 1 - Power Board DC
+uint8_t LoadVariant;                        // Variant of connected load: 1 - One input/output; 2 - Two inputs/outputs
 bool RollerShutter = false;                 // false - lighting; true - roller shutter
 bool Monostable = false;
 bool RememberStates = false;
@@ -41,8 +42,21 @@ void setup()  {
 
   delay(2000);
 
-  //float Vcc = ReadVcc();  // mV
+  // Resistive hardware detection
 
+  uint16_t ReadHardware = analogRead(HARDWARE_DETECTION_PIN);
+
+  if(ReadHardware < 20) {
+    // Hardware variant: Power Board AC
+    HardwareVariant = 0;
+  }
+  else if(ReadHardware < 50)  {
+    // Hardware variant: Power Board DC
+    HardwareVariant = 1;
+  }
+  else  {/* Handling error */}
+
+  // Reading dip switches
   pinMode(DIP_SWITCH_1, INPUT_PULLUP);
   pinMode(DIP_SWITCH_2, INPUT_PULLUP);
   pinMode(DIP_SWITCH_3, INPUT_PULLUP);
@@ -52,10 +66,10 @@ void setup()  {
 
   // Reading dip switch 1
   if(!digitalRead(DIP_SWITCH_1)) {
-    HardwareVariant = 1;
+    LoadVariant = 1;
   }
   else  {
-    HardwareVariant = 2;
+    LoadVariant = 2;
   }
 
   // Reading dip switch 2
@@ -65,7 +79,7 @@ void setup()  {
 
   // Reading dip switch 3
   if(!digitalRead(DIP_SWITCH_3)) {
-    if(HardwareVariant == 2)  {
+    if(HardwareVariant == 0)  {
       RollerShutter = true;
     }
   }
@@ -85,7 +99,7 @@ void setup()  {
   }
 
   // One button variant
-  if(HardwareVariant == 1)  {
+  if(LoadVariant == 1)  {
     // Initialize LEDs
     D[0].SetValues(NUMBER_OF_CHANNELS, DIMMING_STEP, DIMMING_INTERVAL, LED_PIN_7, LED_PIN_8, LED_PIN_9);
 
@@ -93,7 +107,12 @@ void setup()  {
     RainbowLED(INIT_RAINBOW_DURATION, INIT_RAINBOW_RATE);
 
     // Initializing and calibrating button
-    IO[0].SetValues(RELAY_OFF, RELAY_ON, 1, TOUCH_FIELD_3, INPUT_PIN_1, RELAY_PIN_1);
+    if(HardwareVariant == 0) {
+      IO[0].SetValues(RELAY_OFF, RELAY_ON, 1, TOUCH_FIELD_3, INPUT_PIN_1, RELAY_PIN_1);
+    }
+    else if(HardwareVariant == 1) {
+      IO[0].SetValues(RELAY_OFF, RELAY_ON, 2, TOUCH_FIELD_3, RELAY_PIN_1);
+    }
 
     // Restore saved state
     if(RememberStates)  {
@@ -106,7 +125,7 @@ void setup()  {
     }
   }
   // Two buttons variant
-  else if(HardwareVariant == 2) {
+  else if(LoadVariant == 2) {
     // Initialize LEDs
     D[0].SetValues(NUMBER_OF_CHANNELS, DIMMING_STEP, DIMMING_INTERVAL, LED_PIN_1, LED_PIN_2, LED_PIN_3);
     D[1].SetValues(NUMBER_OF_CHANNELS, DIMMING_STEP, DIMMING_INTERVAL, LED_PIN_4, LED_PIN_5, LED_PIN_6);
@@ -115,8 +134,14 @@ void setup()  {
     RainbowLED(INIT_RAINBOW_DURATION, INIT_RAINBOW_RATE);
     
     // Initializing and calibrating buttons
-    IO[0].SetValues(RELAY_OFF, RELAY_ON, 1, TOUCH_FIELD_1, INPUT_PIN_1, RELAY_PIN_1);
-    IO[1].SetValues(RELAY_OFF, RELAY_ON, 1, TOUCH_FIELD_2, INPUT_PIN_2, RELAY_PIN_2);
+    if(HardwareVariant == 0) {
+      IO[0].SetValues(RELAY_OFF, RELAY_ON, 1, TOUCH_FIELD_1, INPUT_PIN_1, RELAY_PIN_1);
+      IO[1].SetValues(RELAY_OFF, RELAY_ON, 1, TOUCH_FIELD_2, INPUT_PIN_2, RELAY_PIN_2);
+    }
+    else if(HardwareVariant == 1) {
+      IO[0].SetValues(RELAY_OFF, RELAY_ON, 2, TOUCH_FIELD_1, RELAY_PIN_1);
+      IO[1].SetValues(RELAY_OFF, RELAY_ON, 2, TOUCH_FIELD_2, RELAY_PIN_2);
+    }
 
     // Restore saved states
     if(RememberStates)  {
@@ -151,7 +176,7 @@ void RainbowLED(uint16_t Duration, uint8_t Rate)	{
 	
   while(millis() < StartTime + Duration)	{
 
-    for(int i=1; i<=HardwareVariant; i++)  {
+    for(int i=1; i<=LoadVariant; i++)  {
       D[i-1].UpdateLEDs(BRIGHTNESS_VALUE_ON, RValue, GValue, BValue);
     }
 	
@@ -188,13 +213,13 @@ void AdjustLEDs(bool State, uint8_t Dimmer) {
 // Check Inputs and adjust outputs
 void UpdateIO() {
 
-  for(int i=0; i<HardwareVariant; i++)  {
+  for(int i=0; i<LoadVariant; i++)  {
     IO[i].ReadInput(TOUCH_THRESHOLD, /*LONGPRESS_DURATION,*/ DEBOUNCE_VALUE, Monostable);
     if(IO[i].NewState != IO[i].OldState)  {
       if(RollerShutter) {
         if(IO[0].OldState || IO[1].OldState)  {
           // Stop
-          for(int j=0; j<HardwareVariant; j++)  {
+          for(int j=0; j<LoadVariant; j++)  {
             IO[j].NewState = 0;            
             IO[j].SetRelay();
             AdjustLEDs(false, j);
