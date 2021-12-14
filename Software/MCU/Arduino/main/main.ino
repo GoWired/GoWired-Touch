@@ -146,9 +146,6 @@ void before() {
 void setup() {
 
   // Resistive hardware detection
-  pinMode(HARDWARE_DETECTION_PIN, INPUT_PULLUP);
-  delay(100);
-
   uint16_t ReadHardware = analogRead(HARDWARE_DETECTION_PIN);
 
   if(ReadHardware < 20) {
