@@ -45,9 +45,12 @@ void RShutterControl::Calibration(uint8_t UpTime, uint8_t DownTime)  {
   
   Position = 0;
 
-  _UpTime = UpTime;
-  _DownTime = DownTime;
+  // Save movement durations to internal variables simulaneously inceasing both values by 1s
+  // to ensure the roller shutter won't stop to early
+  _UpTime = UpTime + 1;
+  _DownTime = DownTime + 1;
 
+  // Save values to EEPROM
   EEPROM.put(EEA_RS_TIME_DOWN, _DownTime);
   EEPROM.put(EEA_RS_TIME_UP, _UpTime);
   EEPROM.put(EEA_RS_POSITION, Position);

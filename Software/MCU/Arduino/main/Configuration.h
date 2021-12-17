@@ -128,6 +128,9 @@
 #define R_VALUE_ON 255
 #define G_VALUE_ON 127
 #define B_VALUE_ON 0
+#define R_VALUE_INACTIVE 255
+#define G_VALUE_INACTIVE 0
+#define B_VALUE_INACTIVE 0
 #define BRIGHTNESS_VALUE_OFF 20
 #define BRIGHTNESS_VALUE_ON 40
 #define RAINBOW_DURATION 2000          // Duration of initial rainbow effect (0-65535, default 1000)

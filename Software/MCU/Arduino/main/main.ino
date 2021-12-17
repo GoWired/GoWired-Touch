@@ -165,13 +165,13 @@ void setup() {
 
   delay(100);
 
-  if(digitalRead(DIP_SWITCH_1) == false) {
+  if(!digitalRead(DIP_SWITCH_1)) {
     // DIP SWITCH 1 ON
     // HardwareVariant 0: roller shutter; HardwareVariant 1: Dimmer 
     LoadVariant = 2;
   }
   else  {
-    if(digitalRead(DIP_SWITCH_2) == false)  {
+    if(!digitalRead(DIP_SWITCH_2))  {
       // DIP SWITCH 2 ON
       // HardwareVariant 0: single switch; HardwareVariant 1: RGB
       LoadVariant = 0;
@@ -183,7 +183,7 @@ void setup() {
     }
   }
 
-  if(digitalRead(DIP_SWITCH_3) == false) {
+  if(!digitalRead(DIP_SWITCH_3)) {
     // Saving States to EEPROM
     // TO BE DEVELOPED
   }
@@ -253,13 +253,9 @@ void setup() {
     IO[1].SetValues(RELAY_OFF, RELAY_ON, 0, TOUCH_FIELD_2);
   }
 
-  if(HardwareVariant == 0 && LoadVariant == 0)  {
-    /* AdjustLEDs(State [0 - OFF, 1 - ON, 2 - Rainbow], Button [0 or 1] */
-    AdjustLEDs(0, 0);
-  }
-  else  {
-    AdjustLEDs(0, 0);
-    AdjustLEDs(0, 1);
+  // Indicate inactivity with LEDs
+  for(int i=0; i<Iterations; i++) {
+    AdjustLEDs(3, i);
   }
 
   // ONBOARD THERMOMETER
@@ -448,6 +444,10 @@ void InitConfirmation() {
     send(MsgVAR1.setSensor(TOUCH_DIAGNOSTIC_ID).set(0));
   #endif
 
+  for(int i=0; i<Iterations; i++) {
+    AdjustLEDs(IO[i].OldState, i);
+  }
+
   InitConfirm = true;
 
 }
@@ -465,15 +465,13 @@ void RainbowLED(uint16_t Duration, uint8_t Rate)	{
 	
   while(millis() < StartTime + Duration)	{
 
-    if(HardwareVariant == 0 && LoadVariant == 0)  {
-      LP5009.SetLEDColor(BUILTIN_LED3, RValue, GValue, BValue);
-      LP5009.SetLEDBrightness(BUILTIN_LED3, BRIGHTNESS_VALUE_ON);
+    if(Iterations == 1)  {
+      AdjustLEDs2(BUILTIN_LED3, BRIGHTNESS_VALUE_ON, RValue, GValue, BValue);
     }
     else {
       uint8_t LEDs[2] = {BUILTIN_LED1, BUILTIN_LED2};
-      for(int i=0; i<2; i++)  {
-        LP5009.SetLEDColor(LEDs[i], RValue, GValue, BValue);
-        LP5009.SetLEDBrightness(LEDs[i], BRIGHTNESS_VALUE_ON);
+      for(int i=0; i<Iterations; i++)  {
+        AdjustLEDs2(LEDs[i], BRIGHTNESS_VALUE_ON, RValue, GValue, BValue);
       }
     }
 	
@@ -492,6 +490,11 @@ void RainbowLED(uint16_t Duration, uint8_t Rate)	{
     if(BValue >= 255 || BValue <= 0)	{
       BDirection = -BDirection;
     }
+
+    if(millis() < StartTime)  {
+      StartTime = millis();
+    }
+
     wait(Rate);
   }
 }
@@ -510,15 +513,24 @@ void AdjustLEDs(uint8_t State, uint8_t Button) {
 
   switch(State) {
     case 0:
-      LP5009.SetLEDColor(LED, R_VALUE_OFF, G_VALUE_OFF, B_VALUE_OFF);
-      LP5009.SetLEDBrightness(LED, BRIGHTNESS_VALUE_OFF);
+      // Output is in OFF state
+      AdjustLEDs2(LED, BRIGHTNESS_VALUE_OFF,R_VALUE_OFF, G_VALUE_OFF, B_VALUE_OFF);
       break;
     case 1:
-      LP5009.SetLEDColor(LED, R_VALUE_ON, G_VALUE_ON, B_VALUE_ON);
-      LP5009.SetLEDBrightness(LED, BRIGHTNESS_VALUE_ON);
+      // Output is in ON state
+      AdjustLEDs2(LED, BRIGHTNESS_VALUE_ON,R_VALUE_ON, G_VALUE_ON, B_VALUE_ON);
       break;
     case 2:
+      // Long press
       RainbowLED(RAINBOW_DURATION, RAINBOW_RATE);
+      break;
+    case 3:
+      // Indication of button inactivity
+      AdjustLEDs2(LED, BRIGHTNESS_VALUE_ON, R_VALUE_INACTIVE, G_VALUE_INACTIVE, G_VALUE_INACTIVE);
+      break;
+    case 4:
+      // Turn all channels OFF
+      AdjustLEDs2(LED, 0, 0, 0, 0);
       break;
     default:
       break;
@@ -531,6 +543,27 @@ void AdjustLEDs2(uint8_t LED, uint8_t Brightness, uint8_t R, uint8_t G, uint8_t 
   // LED: BUILTIN_LED1 / BUILTIN_LED2 / BUILTIN_LED3
   LP5009.SetLEDColor(LED, R, G, B);
   LP5009.SetLEDBrightness(LED, Brightness);
+}
+
+// Makes LEDs blink with period controlled externally
+void BlinkLEDs(uint8_t InitialState=0) {
+  
+  static uint8_t Blink = 3;
+
+  if(InitialState == 3 || InitialState == 4) {
+    Blink = InitialState;
+  }
+
+  for(int i=0; i<Iterations; i++) {
+    AdjustLEDs(Blink, i);
+  }
+
+  if(Blink == 3)  {
+    Blink++;   
+  }
+  else if(Blink == 4) {
+    Blink--; 
+  }
 }
 
 // Touch diagnosis
@@ -554,18 +587,22 @@ bool TouchDiagnosis(uint16_t Threshold) {
 // Reading new reference for touch buttons
 void ReadNewReference() {
 
-  for(int i=0; i<Iterations; i++)  {
-    // Turn off LEDs
-    for(int j=1; j<4; j++)  {
-      LP5009.SetLEDBrightness(j, 0);
-    }
-    // Take a break from running
+  // Blink LEDs to indicate inactivity and take a break from normal operation
+  for(int i=3; i<5; i++)  {
+    BlinkLEDs(i);
     delay(1000);
-    // Read new reference
+  }
+
+  // Read new reference
+  for(int i=0; i<Iterations; i++)  {
     IO[i].ReadReference();
-    // Rainbow LED visual effect
-    RainbowLED(RAINBOW_DURATION, RAINBOW_RATE);
-    // Turn LEDs on
+  }
+
+  // Rainbow LED visual effect - indicate calibration
+  RainbowLED(RAINBOW_DURATION, RAINBOW_RATE);
+
+  // Adjust LEDs to indicate button states
+  for(int i=0; i<Iterations; i++)  {
     AdjustLEDs(IO[i].OldState, i);
   }
 }
@@ -601,15 +638,19 @@ void receive(const MyMessage &message)  {
       }
     }
     // Secret configuration
+    // Secret configuration
     if(message.sensor == SECRET_CONFIG_ID_1)  {
-      // Roller shutter calibration
-      float Vcc = ReadVcc();
-      RSCalibration(Vcc);
+      if(HardwareVariant == 0 && LoadVariant == 2)  {
+        // Roller shutter calibration
+        float Vcc = ReadVcc();
+        RSCalibration(Vcc);
+      }
     }
   }
   // Percentage messages
   else if (message.type == V_PERCENTAGE) {
-    #ifdef ROLLER_SHUTTER
+    if(HardwareVariant == 0 && LoadVariant == 2)  {
+      // Roller shutter position
       if(message.sensor == RS_ID) {
         int NewPosition = atoi(message.data);
         NewPosition = NewPosition > 100 ? 100 : NewPosition;
@@ -618,9 +659,10 @@ void receive(const MyMessage &message)  {
         RSUpdate();
         MovementTime = RS.ReadNewPosition(NewPosition);
       }
-    #endif
-    #if defined(DIMMER) || defined(RGB) || defined(RGBW)
+    }
+    if(HardwareVariant == 1)  {
       if(message.sensor == DIMMER_ID) {
+        // Dimming value for dimmers (all variants)
         Dimmer.NewDimmingLevel = atoi(message.data);
         Dimmer.NewDimmingLevel = Dimmer.NewDimmingLevel > 100 ? 100 : Dimmer.NewDimmingLevel;
         Dimmer.NewDimmingLevel = Dimmer.NewDimmingLevel < 0 ? 0 : Dimmer.NewDimmingLevel;
@@ -631,11 +673,11 @@ void receive(const MyMessage &message)  {
         }
         Dimmer.ChangeLevel();
       }
-    #endif
+    }
   }
   // RGB/RGBW messages
   else if (message.type == V_RGB || message.type == V_RGBW) {
-    #if defined(RGB) || defined(RGBW)
+    if(HardwareVariant == 1 && LoadVariant != 2)  {
       if(message.sensor == DIMMER_ID) {
         const char *rgbvalues = message.getString();
 
@@ -646,29 +688,29 @@ void receive(const MyMessage &message)  {
         Dimmer.NewColorValues(rgbvalues);
         Dimmer.ChangeColors();
       }
-    #endif
+    }
   }
   // Roller shutter control messages (UP, DOWN, STOP)
   else if(message.type == V_UP) {
-    #ifdef ROLLER_SHUTTER
+    if(HardwareVariant == 0 && LoadVariant == 2)  {
       if(message.sensor == RS_ID) {
         MovementTime = RS.ReadMessage(0);
       }
-    #endif
+    }
   }
   else if(message.type == V_DOWN) {
-    #ifdef ROLLER_SHUTTER
+    if(HardwareVariant == 0 && LoadVariant == 2)  {
       if(message.sensor == RS_ID) {
         MovementTime = RS.ReadMessage(1);
       }
-    #endif
+    }
   }
   else if(message.type == V_STOP) {
-    #ifdef ROLLER_SHUTTER
+    if(HardwareVariant == 0 && LoadVariant == 2)  {
       if(message.sensor == RS_ID) {
         MovementTime = RS.ReadMessage(2);
       }
-    #endif
+    }
   }
 }
 
@@ -825,12 +867,16 @@ void RSCalibration(float Vcc)  {
   uint32_t StopTime = 0;
   uint32_t MeasuredTime = 0;
 
-  // Opening the shutter  
+  // Indicate inactivity of buttons with builtin LEDs
+  BlinkLEDs(3);
+
+  // Open the shutter  
   RS.NewState = 0;
   RS.Movement();
 
   do  {
-    delay(100);
+    delay(500);
+    BlinkLEDs();
     wdt_reset();
     Current = PS.MeasureAC(Vcc);
   } while(Current > PS_OFFSET);
@@ -840,7 +886,7 @@ void RSCalibration(float Vcc)  {
 
   delay(1000);
 
-  // Calibrating
+  // Calibrate
   for(int i=0; i<CALIBRATION_SAMPLES; i++) {
     for(int j=1; j>=0; j--)  {
       RS.NewState = j;
@@ -848,7 +894,8 @@ void RSCalibration(float Vcc)  {
       StartTime = millis();
 
       do  {
-        delay(100);
+        delay(250);
+        BlinkLEDs();
         Current = PS.MeasureAC(Vcc);
         StopTime = millis();
         wdt_reset();
@@ -872,11 +919,18 @@ void RSCalibration(float Vcc)  {
 
   RS.Position = 0;
 
+  // Calculate movement durations
   uint8_t DownTime = (int)(DownTimeCumulated / CALIBRATION_SAMPLES);
   uint8_t UpTime = (int)(UpTimeCumulated / CALIBRATION_SAMPLES);
 
+  // Pass movement durations to the object if they are greater than 1s
   if(DownTime > 1 && UpTime > 1)  {
     RS.Calibration(UpTime, DownTime);
+  }
+
+  // Change LED indication to normal again
+  for(int i=0; i<Iterations; i++)  {
+    AdjustLEDs(IO[i].OldState, i);
   }
 }
 
