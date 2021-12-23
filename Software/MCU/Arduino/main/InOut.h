@@ -11,15 +11,15 @@ class InOut
     InOut();
 
     uint8_t SensorType;
-    uint8_t NewState;
-    uint8_t OldState;
 
     void SetValues(bool RelayOFF, bool RelayOn, uint8_t Type, uint8_t Pin1, uint8_t Pin2=0, uint8_t Pin3=0);
     void ReadReference();
-    int ReadInput(uint16_t Threshold, uint16_t LongpressDuration, uint8_t DebounceValue);
-    //void DigitalInput();
-    //void AnalogInput(uint16_t Threshold, bool Monostable);
+    void SetState(uint8_t NewState);
     void SetRelay();
+    uint8_t ReadNewState();
+    uint8_t ReadState();
+    bool ReadDigital(uint8_t DebounceValue);
+    int ReadInput(uint16_t Threshold, uint16_t LongpressDuration, uint8_t DebounceValue);
 
   private:
     int _TouchReference;
@@ -28,6 +28,8 @@ class InOut
     uint8_t _SensorPin2;
     bool _RelayOFF;
     bool _RelayON;
+    uint8_t _NewState;
+    uint8_t _State;
 };
 
 

@@ -3,8 +3,8 @@
 // Constructor
 InOut::InOut()  {
   
-  NewState = 0;
-  OldState = 0;
+  _NewState = 0;
+  _State = 0;
 }
 
 // Set Values - initialization
@@ -36,34 +36,53 @@ void InOut::SetValues(bool RelayOFF, bool RelayON, uint8_t Type, uint8_t Pin1, u
   ReadReference();
 }
 
+// Measure touch field reference value
 void InOut::ReadReference()  {
 
-  // Measure touch field reference value
   _TouchReference = ADCTouch.read(_SensorPin, 500);         // ADCTouch.read(pin, number of samples)
 }
 
+// Return _NewState
+uint8_t InOut::ReadNewState() {
+
+  return _NewState;
+}
+
+uint8_t InOut::ReadState()  {
+
+  return _State;
+}
+
+// Set _NewState
+void InOut::SetState(uint8_t NewState)  {
+
+  _NewState = NewState;
+}
+
+// Read analog & digital inputs
 int InOut::ReadInput(uint16_t Threshold, uint16_t LongpressDuration, uint8_t DebounceValue)  {
 
-  bool ExternalButtonState = true;
+  int TouchValue;
+  int TouchValueAggregated;
   bool Shortpress = false;
   bool Longpress = false;
-  int Value;
-  int ValueAggregate = 0;
-  uint8_t i = 0;
+  uint8_t Counter = 0;
   uint32_t StartTime = millis();
-  
+
   do {
-    Value = ADCTouch.read(_SensorPin, 20);
-    Value -= _TouchReference;
-    ValueAggregate += Value;
-    i++;
-
-    if(SensorType == 1) {
-      ExternalButtonState = digitalRead(_SensorPin2);
-    }
-
-    if(millis() - StartTime > DebounceValue) {
+    // Read touch field with 100 samples
+    TouchValue = ADCTouch.read(_SensorPin);
+    TouchValue -= _TouchReference;
+    TouchValueAggregated += TouchValue;
+    Counter++;
+    
+    if(TouchValue > Threshold)  {
       Shortpress = true;
+    }
+    else  {
+      if(SensorType == 1) {
+        Shortpress = ReadDigital(DebounceValue);
+      }
     }
 
     if(millis() - StartTime > LongpressDuration) {
@@ -74,73 +93,50 @@ int InOut::ReadInput(uint16_t Threshold, uint16_t LongpressDuration, uint8_t Deb
     if(millis() < StartTime)  {
       StartTime = millis();
     }
-  } while(!ExternalButtonState || (Value > Threshold));
 
-  if(!Longpress)  {
-    if(Shortpress)  {
-      NewState = OldState == 1 ? 0 : 1;
-    }
+  } while(Shortpress);
+
+  if(Longpress) {
+    _NewState = 2;
   }
-  else  {
-    NewState = 2;
+  else if(Shortpress) {
+    _NewState = !_State;
   }
-  
-  return (int)(ValueAggregate / i);
+
+  return (int)(TouchValueAggregated / Counter);
 }
 
-/*// Check digital input
-void InOut::DigitalInput()  {
+bool InOut::ReadDigital(uint8_t DebounceValue) {
 
-  if(digitalRead(_SensorPin2) != LOW) {
-    _HighStateDetection = true;
-    _LowStateDetection = false;
-    _Condition = false;
-  }
-  else  {
-    if(_HighStateDetection == true) {
-      _LowStateDetection = true;
-    }
-  }
-  if(_LowStateDetection == true)  {
-    NewState = !OldState;
-  }
-}
+  bool DigitalInput;
+  uint32_t StartTime = millis();
 
-// Check analog input
-void InOut::AnalogInput(uint16_t Threshold, bool Monostable) {
-  
-  bool ButtonPressed = false;
-  uint16_t Value = ADCTouch.read(_SensorPin);
-  Value -= _TouchReference;
-
-  if(Value > Threshold) {
-    ButtonPressed = true;
-  }
-
-  if(Monostable != true)  {
-    if(ButtonPressed == true) {
-      NewState = !OldState;
+  while(millis() - StartTime < DebounceValue) {
+    if(digitalRead(_SensorPin2))  {
+      DigitalInput = false;
+      break;
     }
     else  {
-      if(ButtonPressed == true) {
-        NewState = 1;
-      }
-      else  {
-        NewState = 0;
-      }
+      DigitalInput = true;
+    }
+
+    if(millis() < StartTime)  {
+      StartTime = millis();
     }
   }
-}*/
+
+  return DigitalInput;
+}
 
 // Set Relay
 void InOut::SetRelay() {
 
-  if(NewState == 1)  {
+  if(_NewState == 1)  {
     digitalWrite(_RelayPin, _RelayON);
   }
   else  {
     digitalWrite(_RelayPin, _RelayOFF);
   }
   
-  OldState = NewState;
+  _State = _NewState;
 }

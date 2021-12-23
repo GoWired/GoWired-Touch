@@ -73,6 +73,7 @@ bool InitConfirm = false;
 // Touch Diagnosis
 int TouchValueAggregated[2];
 uint8_t LimitTransgressions = 0;
+uint8_t LongpressDetection = 0;
 
 /*  *******************************************************************************************
                                         Constructors
@@ -344,17 +345,17 @@ void InitConfirmation() {
   if(HardwareVariant == 0)  {
     // Single output
     if(LoadVariant == 0)  {
-      send(MsgSTATUS.setSensor(RELAY_ID_1).set(IO[RELAY_ID_1].NewState));
+      send(MsgSTATUS.setSensor(RELAY_ID_1).set(IO[RELAY_ID_1].ReadNewState()));
       request(RELAY_ID_1, V_STATUS);
       wait(2000, C_SET, V_STATUS);
     }
     // Double output
     else if(LoadVariant == 1) {
-      send(MsgSTATUS.setSensor(RELAY_ID_1).set(IO[RELAY_ID_1].NewState));
+      send(MsgSTATUS.setSensor(RELAY_ID_1).set(IO[RELAY_ID_1].ReadNewState()));
       request(RELAY_ID_1, V_STATUS);
       wait(2000, C_SET, V_STATUS);
 
-      send(MsgSTATUS.setSensor(RELAY_ID_2).set(IO[RELAY_ID_2].NewState));
+      send(MsgSTATUS.setSensor(RELAY_ID_2).set(IO[RELAY_ID_2].ReadNewState()));
       request(RELAY_ID_2, V_STATUS);
       wait(2000, C_SET, V_STATUS);
     }
@@ -445,7 +446,7 @@ void InitConfirmation() {
   #endif
 
   for(int i=0; i<Iterations; i++) {
-    AdjustLEDs(IO[i].OldState, i);
+    AdjustLEDs(IO[i].ReadNewState(), i);
   }
 
   InitConfirm = true;
@@ -603,7 +604,7 @@ void ReadNewReference() {
 
   // Adjust LEDs to indicate button states
   for(int i=0; i<Iterations; i++)  {
-    AdjustLEDs(IO[i].OldState, i);
+    AdjustLEDs(IO[i].ReadNewState(), i);
   }
 }
 
@@ -631,13 +632,12 @@ void receive(const MyMessage &message)  {
     if(HardwareVariant == 0 && LoadVariant != 2)  {
       if (message.sensor == RELAY_ID_1 || message.sensor == RELAY_ID_2)  {
         if (!OVERCURRENT_ERROR) {
-          IO[message.sensor].NewState = message.getBool();
+          IO[message.sensor].SetState(message.getBool());
           IO[message.sensor].SetRelay();
-          AdjustLEDs(IO[message.sensor].NewState, message.sensor);
+          AdjustLEDs(IO[message.sensor].ReadNewState(), message.sensor);
         }
       }
     }
-    // Secret configuration
     // Secret configuration
     if(message.sensor == SECRET_CONFIG_ID_1)  {
       if(HardwareVariant == 0 && LoadVariant == 2)  {
@@ -656,7 +656,7 @@ void receive(const MyMessage &message)  {
         NewPosition = NewPosition > 100 ? 100 : NewPosition;
         NewPosition = NewPosition < 0 ? 0 : NewPosition;
         RS.NewState = 2;
-        RSUpdate();
+        UpdateRS();
         MovementTime = RS.ReadNewPosition(NewPosition);
       }
     }
@@ -736,121 +736,80 @@ void ETUpdate()  {
   #endif
 }
 
-/*  *******************************************************************************************
-                                        IO Update
- *  *******************************************************************************************/
-void IOUpdate() {
+// Update inputs & outputs
+void UpdateIO() {
 
-  uint8_t FirstSensor = 0;
-  uint8_t LongpressDetectionCount = 0; 
+  uint8_t NewState[Iterations];
 
-  if (Iterations > 0)  {
-    for (int i = FirstSensor; i < FirstSensor + Iterations; i++)  {
-      TouchValueAggregated[i] = IO[i].ReadInput(TOUCH_THRESHOLD, LONGPRESS_DURATION, DEBOUNCE_VALUE);
-      if (IO[i].NewState != IO[i].OldState)  {
-        switch(IO[i].SensorType)  {
-          case 0:
-            // Touch Fields only (Hardware: RGBW)
-            if(HardwareVariant == 1)  {
-              if(i == 0)  {
-                if(IO[i].NewState != 2) {
-                  // Change dimmer status
-                  Dimmer.NewState = !Dimmer.NewState;
-                  for(int j=0; j<2; j++)  {
-                    AdjustLEDs(IO[i].NewState, j);
-                  }
-                  Dimmer.ChangeState();
-                  send(MsgSTATUS.setSensor(DIMMER_ID).set(Dimmer.NewState));
-                  IO[i].OldState = IO[i].NewState;
-                }
-                #ifdef SPECIAL_BUTTON
-                  if(IO[i].NewState == 2) {
-                    AdjustLEDs(IO[i].NewState, 0);
-                    IO[i].NewState = IO[i].OldState;
-                    AdjustLEDs(IO[i].NewState, 0);
-                    int j = i == 0 ? 1 : 0;
-                    AdjustLEDs(IO[j].NewState, j);
-                    LongpressDetectionCount++;
-                  }
-                #endif  
-              }
-              else if(i == 1) {
-                if(IO[i].NewState != 2)  {
-                  if(Dimmer.NewState) {
-                    // Toggle dimming level by DIMMING_TOGGLE_STEP
-                    Dimmer.NewDimmingLevel += DIMMING_TOGGLE_STEP;
+  for(int i=0; i<Iterations; i++) {
+    NewState[i] = IO[i].ReadNewState();
+    if(NewState[i] != IO[i].ReadState())  {
+      // Binary states
+      if(NewState[i] != 2)  {
+        // 2Relay Board
+        if(HardwareVariant == 0)  {
+          // Load: lighting
+          if(LoadVariant != 2)  {
+            IO[i].SetRelay();
+            AdjustLEDs(NewState[i], i);
+            send(MsgSTATUS.setSensor(i).set(NewState[i]));
+          }
+          // Load: roller shutter
+          else  {
+            MovementTime = RS.ReadButtons(i);
+            IO[i].SetState(0);
+          }
+        }
+        // RGBW Board
+        else if(HardwareVariant == 1) {
+          // Changing dimmer state (ON/OFF)
+          if(i == 0 || (i == 1 && !Dimmer.NewState))  {
+            Dimmer.NewState = !Dimmer.NewState;
+            AdjustLEDs(Dimmer.NewState, i);          
+            Dimmer.ChangeState();
+            send(MsgSTATUS.setSensor(DIMMER_ID).set(Dimmer.NewState));
+            IO[i].SetState(0);
+          }
+          else if(i == 1 && Dimmer.NewState) {
+            // Toggle dimming level by DIMMING_TOGGLE_STEP
+            Dimmer.NewDimmingLevel += DIMMING_TOGGLE_STEP;
 
-                    Dimmer.NewDimmingLevel = Dimmer.NewDimmingLevel > 100 ? DIMMING_TOGGLE_STEP : Dimmer.NewDimmingLevel;
-                    send(MsgPERCENTAGE.setSensor(DIMMER_ID).set(Dimmer.NewDimmingLevel));
-                    Dimmer.ChangeLevel();
-                  }
-                  else  {
-                    // If dimmer is turned off - turn it on
-                    Dimmer.NewState = 1;
-                    for(int j=0; j<2; j++)  {
-                      AdjustLEDs(IO[i].NewState, j);
-                    }
-                    Dimmer.ChangeState();
-                    send(MsgSTATUS.setSensor(DIMMER_ID).set(Dimmer.NewState));
-                    IO[i].OldState = IO[i].NewState;
-                  }
-                }
-                else  {
-                  // Handling of longpress of the second button
-                }
-              }
-            }
-          case 1:
-            // Touch Fields & External buttons (Hardware: 2Relay)
-            if(HardwareVariant == 0)  {
-              // 1 relay or 2 relays
-              if(LoadVariant == 0 || LoadVariant == 1)  {
-                if (IO[i].NewState != 2)  {
-                  if (!OVERCURRENT_ERROR)  {
-                    IO[i].SetRelay();
-                    AdjustLEDs(IO[i].NewState, i);
-                    send(MsgSTATUS.setSensor(i).set(IO[i].NewState));
-                  }
-                }
-              }
-              // Roller shutter
-              else if(LoadVariant == 2)  {
-                if(IO[i].NewState != 2)  {
-                  MovementTime = RS.ReadButtons(i);
-                  // Adjusting LEDs is done in RSUpdate() function
-                  IO[i].OldState = IO[i].NewState;
-                }
-              }
-            }
-            // Special button
-            if(IO[i].NewState == 2) {
-              #ifdef SPECIAL_BUTTON
-                AdjustLEDs(IO[i].NewState, i);
-                IO[i].NewState = IO[i].OldState;
-                AdjustLEDs(IO[i].NewState, i);
-                if(LoadVariant != 0)  {
-                  int j = i == 0 ? 1 : 0;
-                  AdjustLEDs(IO[j].NewState, j);
-                }
-                LongpressDetectionCount++;
-              #endif
-            }
-            break;
-          default:
-            // Nothing to do here
-          break;
+            Dimmer.NewDimmingLevel = Dimmer.NewDimmingLevel > 100 ? DIMMING_TOGGLE_STEP : Dimmer.NewDimmingLevel;
+            send(MsgPERCENTAGE.setSensor(DIMMER_ID).set(Dimmer.NewDimmingLevel));
+            Dimmer.ChangeLevel();
+            IO[i].SetState(0);
+          }
         }
       }
-    }
-    if(LongpressDetectionCount == 1)  {
-      #ifdef SPECIAL_BUTTON
-        send(MsgSTATUS.setSensor(SPECIAL_BUTTON_ID).set(true));
-      #endif
-    }
-    else if(LongpressDetectionCount > 1) {
-      #ifdef TOUCH_AUTO_DIAGNOSTICS
-        ReadNewReference();
-      #endif
+      // Longpress
+      else  {
+        #ifdef SPECIAL_BUTTON
+          LongpressDetection++;
+          AdjustLEDs(NewState[i], 0);
+          IO[i].SetState(IO[i].ReadState());
+
+          if(HardwareVariant == 0)  {
+            if(LoadVariant != 2)  {
+              AdjustLEDs(NewState[i], i);
+              if(LoadVariant != 0)  {
+                int j = i == 0 ? 1 : 0;
+                AdjustLEDs(IO[j].ReadNewState(), j);
+              }
+            }
+            else {
+              AdjustLEDs(0, 0); AdjustLEDs(0, 1); 
+            }
+          }
+          else if(HardwareVariant == 1) {
+            if(Dimmer.NewState) {
+              AdjustLEDs(1, 0); AdjustLEDs(0, 1);
+            }
+            else  {
+              AdjustLEDs(0, 0); AdjustLEDs(0, 1);
+            }
+          }
+        #endif
+      }
     }
   }
 }
@@ -930,14 +889,14 @@ void RSCalibration(float Vcc)  {
 
   // Change LED indication to normal again
   for(int i=0; i<Iterations; i++)  {
-    AdjustLEDs(IO[i].OldState, i);
+    AdjustLEDs(IO[i].ReadNewState(), i);
   }
 }
 
 /*  *******************************************************************************************
                                         Roller Shutter
  *  *******************************************************************************************/
-void RSUpdate() {
+void UpdateRS() {
 
   uint32_t StopTime = 0;
   uint32_t MeasuredTime;
@@ -1046,26 +1005,38 @@ void loop() {
     InitConfirmation();
   }
 
-  // Reading inputs / activating outputs
-  IOUpdate();
-
-  #ifdef TOUCH_AUTO_DIAGNOSTICS
-    // Checking if touch feature works correctly
-    TouchDiagnosis(TOUCH_THRESHOLD);
-
-    // Reading new touch reference if diagnosis shows that previous values were not correct
-    if(LimitTransgressions > TOUCH_DIAG_TRESHOLD)  {
-      ReadNewReference();
-      LimitTransgressions = 0;
+  // Reading inputs & adjusting outputs
+  if(Iterations > 0)  {
+    for(int i=0; i<Iterations; i++) {
+      TouchValueAggregated[i] = IO[i].ReadInput(TOUCH_THRESHOLD, LONGPRESS_DURATION, DEBOUNCE_VALUE);
     }
-  #endif
-
-  // Updating roller shutter
-  if(HardwareVariant == 0 && LoadVariant == 2)  {
-    RSUpdate();
+    UpdateIO();
+    if(LongpressDetection > 0)  {
+      for(int j=0; j<2; j++)  {
+        for(int i=0; i<Iterations; i++) {
+          TouchValueAggregated[i] = IO[i].ReadInput(TOUCH_THRESHOLD, LONGPRESS_DURATION, DEBOUNCE_VALUE);
+        }
+        UpdateIO();
+      }
+      if(LongpressDetection > 2)  {
+        // Read new touch reference for touch buttons
+        #ifdef TOUCH_AUTO_DIAGNOSTICS
+          ReadNewReference();
+        #endif
+      }
+      else  {
+        // Send longpress message
+        #ifdef SPECIAL_BUTTON
+        send(MsgSTATUS.setSensor(SPECIAL_BUTTON_ID).set(true));
+        #endif
+      }
+    }
+    if(HardwareVariant == 0 && LoadVariant == 2)  {
+      UpdateRS();
+    }
   }
 
-  // Reading power sensor(s)
+  // Reading power sensor
   #ifdef POWER_SENSOR
     // 2Relay Board
     if(HardwareVariant == 0)  {
@@ -1108,15 +1079,15 @@ void loop() {
         // Load: Lighting
         if(LoadVariant < 2) {
           for (int i = RELAY_ID_1; i < RELAY_ID_1 + NUMBER_OF_RELAYS; i++)  {
-            IO[i].NewState = RELAY_OFF;
+            IO[i].SetState(RELAY_OFF);
             IO[i].SetRelay();
-            send(MsgSTATUS.setSensor(i).set(IO[i].NewState));
+            send(MsgSTATUS.setSensor(i).set(RELAY_OFF));
           }
         }
         // Load: Roller shutter
         else if(LoadVariant == 2) {
           RS.NewState = 2;
-          RSUpdate();
+          UpdateRS();
         }
       }
       // Board: RGBW
@@ -1138,7 +1109,18 @@ void loop() {
   // Reset LastUpdate if millis() has overflowed
   if(LastUpdate > millis()) {
     LastUpdate = millis();
-  }  
+  }
+
+  #ifdef TOUCH_AUTO_DIAGNOSTICS
+    // Checking if touch feature works correctly
+    TouchDiagnosis(TOUCH_THRESHOLD);
+
+    // Reading new touch reference if diagnosis shows that previous values were not correct
+    if(LimitTransgressions > TOUCH_DIAG_TRESHOLD)  {
+      ReadNewReference();
+      LimitTransgressions = 0;
+    }
+  #endif
   
   // Checking out sensors which report at a defined interval
   if ((millis() > LastUpdate + INTERVAL) || CheckNow == true)  {
