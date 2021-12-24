@@ -7,15 +7,7 @@
 /*  *******************************************************************************************
  *                                      Constructor
  *  *******************************************************************************************/
-RShutterControl::RShutterControl(uint8_t UpPin, uint8_t DownPin, bool RelayOn, bool RelayOff)  {
-
-  _DownPin = DownPin;
-  _UpPin = UpPin;
-  _RelayOn = RelayOn;
-  _RelayOff = RelayOff;
-  
-  pinMode(_UpPin, OUTPUT);  digitalWrite(_UpPin, RelayOff);
-  pinMode(_DownPin, OUTPUT);  digitalWrite(_DownPin, RelayOff);
+RShutterControl::RShutterControl()  {
 
   NewState = 2;
   State = 2;
@@ -35,7 +27,17 @@ RShutterControl::RShutterControl(uint8_t UpPin, uint8_t DownPin, bool RelayOn, b
   else  {
     Calibrated = false;
   }
+}
 
+void RShutterControl::SetOutputs(uint8_t UpPin, uint8_t DownPin, bool RelayOn, bool RelayOff)  {
+
+  _DownPin = DownPin;
+  _UpPin = UpPin;
+  _RelayOn = RelayOn;
+  _RelayOff = RelayOff;
+
+  pinMode(_UpPin, OUTPUT);  digitalWrite(_UpPin, RelayOff);
+  pinMode(_DownPin, OUTPUT);  digitalWrite(_DownPin, RelayOff);
 }
 
 /*  *******************************************************************************************

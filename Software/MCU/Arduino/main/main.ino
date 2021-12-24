@@ -85,7 +85,7 @@ LP50XX LP5009(BGR, LP5009_ENABLE_PIN);
 InOut IO[NUMBER_OF_RELAYS+NUMBER_OF_INPUTS];
 
 // RShutterControl class Constructor
-RShutterControl RS(RELAY_PIN_1, RELAY_PIN_2, RELAY_ON, RELAY_OFF);
+RShutterControl RS;
 
 // Dimmer class constructor
 Dimmer Dimmer;
@@ -221,6 +221,7 @@ void setup() {
       // Roller shutter
       IO[RS_ID].SetValues(RELAY_OFF, RELAY_ON, 1, TOUCH_FIELD_1, INPUT_PIN_1, RELAY_PIN_1);
       IO[RS_ID + 1].SetValues(RELAY_OFF, RELAY_ON, 1, TOUCH_FIELD_2, INPUT_PIN_2, RELAY_PIN_2);
+      RS.SetOutputs(RELAY_PIN_1, RELAY_PIN_2, RELAY_ON, RELAY_OFF);
       // Temporary calibration
       RS.Calibration(UP_TIME, DOWN_TIME);
     }
@@ -630,9 +631,22 @@ void receive(const MyMessage &message)  {
     // Secret configuration
     if(message.sensor == SECRET_CONFIG_ID_1)  {
       if(HardwareVariant == 0 && LoadVariant == 2)  {
-        // Roller shutter calibration
+        // Roller shutter: calibration
         float Vcc = ReadVcc();
         RSCalibration(Vcc);
+      }
+    }
+    if(message.sensor == SECRET_CONFIG_ID_2)  {
+      if(HardwareVariant == 0 && LoadVariant == 2)  {
+        // Roller shutter: swap inputs
+        IO[RS_ID].SetValues(RELAY_OFF, RELAY_ON, 1, TOUCH_FIELD_2, INPUT_PIN_2, RELAY_PIN_2);
+        IO[RS_ID + 1].SetValues(RELAY_OFF, RELAY_ON, 1, TOUCH_FIELD_1, INPUT_PIN_1, RELAY_PIN_1);
+      }
+    }
+    if(message.sensor == SECRET_CONFIG_ID_3)  {
+      // Roller shutter: swap outputs
+      if(HardwareVariant == 0 && LoadVariant == 2)  {
+        RS.SetOutputs(RELAY_PIN_2, RELAY_PIN_1, RELAY_ON, RELAY_OFF);
       }
     }
   }
