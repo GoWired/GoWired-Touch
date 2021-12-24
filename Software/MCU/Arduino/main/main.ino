@@ -128,17 +128,6 @@ void before() {
     MCUSR = 0;
     wdt_disable();
   #endif
-
-  uint32_t InitDelay;
-
-  if(_nodeId != AUTO) {
-    InitDelay = _nodeId * INIT_DELAY;
-  }
-  else  {
-    InitDelay = 0;
-  }
-  
-  wait(InitDelay);
 }
 
 /*  *******************************************************************************************
