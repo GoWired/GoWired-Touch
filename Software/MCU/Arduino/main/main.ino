@@ -71,7 +71,6 @@ bool ET_ERROR = 0;                       // External thermometer status (0 - ok,
 bool InitConfirm = false;
 
 // Touch Diagnosis
-int TouchValueAggregated[2];
 uint8_t LimitTransgressions = 0;
 uint8_t LongpressDetection = 0;
 
@@ -115,7 +114,7 @@ MyMessage MsgRGBW(0, V_RGBW);
 // Debug
 #ifdef RS485_DEBUG
   MyMessage MsgTEXT(0, V_TEXT);
-  MyMessage MsgVAR1(0, V_VAR1);
+  MyMessage MsgCUSTOM(0, V_CUSTOM);
 #endif
 
 /*  *******************************************************************************************
@@ -320,7 +319,7 @@ void presentation() {
 
   #ifdef RS485_DEBUG
     present(DEBUG_ID, S_INFO, "DEBUG INFO");
-    present(TOUCH_DIAGNOSTIC_ID, S_DISTANCE, "Touch Diagnostic");
+    present(TOUCH_DIAGNOSTIC_ID, S_CUSTOM, "Touch Diagnostic");
   #endif
 
 }
@@ -432,7 +431,7 @@ void InitConfirmation() {
 
   #ifdef RS485_DEBUG
     send(MsgTEXT.setSensor(DEBUG_ID).set("DEBUG MESSAGE"));
-    send(MsgVAR1.setSensor(TOUCH_DIAGNOSTIC_ID).set(0));
+    send(MsgCUSTOM.setSensor(TOUCH_DIAGNOSTIC_ID).set(0));
   #endif
 
   for(int i=0; i<Iterations; i++) {
@@ -561,14 +560,14 @@ void BlinkLEDs(uint8_t InitialState=0) {
 bool TouchDiagnosis(uint16_t Threshold) {
 
   for(int i=0; i<Iterations; i++)  {
-    if(TouchValueAggregated[i] > (int)(Threshold / 2) || TouchValueAggregated[i] < -(int)(Threshold / 2))  {
+    if(IO[i].TouchDiagnosisValue > (int)(Threshold / 2) || IO[i].TouchDiagnosisValue < -(int)(Threshold / 2))  {
       
       #ifdef RS485_DEBUG
         // Send message with TouchValue
-        send(MsgVAR1.setSensor(TOUCH_DIAGNOSTIC_ID).set(TouchValueAggregated[i]));
+        send(MsgCUSTOM.setSensor(TOUCH_DIAGNOSTIC_ID).set(IO[i].TouchDiagnosisValue));
       #endif
 
-      if(TouchValueAggregated[i] < Threshold) {
+      if(IO[i].TouchDiagnosisValue < Threshold) {
         LimitTransgressions++;
       }
     }
@@ -625,6 +624,9 @@ void receive(const MyMessage &message)  {
           IO[message.sensor].SetState(message.getBool());
           IO[message.sensor].SetRelay();
           AdjustLEDs(IO[message.sensor].ReadNewState(), message.sensor);
+          #ifdef RS485_DEBUG
+            send(MsgCUSTOM.setSensor(TOUCH_DIAGNOSTIC_ID).set(IO[message.sensor].DebugValue));
+          #endif
         }
       }
     }
@@ -793,7 +795,7 @@ void UpdateIO() {
 
           if(HardwareVariant == 0)  {
             if(LoadVariant != 2)  {
-              AdjustLEDs(NewState[i], i);
+              AdjustLEDs(IO[i].ReadNewState(), i);
               if(LoadVariant != 0)  {
                 int j = i == 0 ? 1 : 0;
                 AdjustLEDs(IO[j].ReadNewState(), j);
@@ -813,6 +815,9 @@ void UpdateIO() {
           }
         #endif
       }
+      #ifdef RS485_DEBUG
+        send(MsgCUSTOM.setSensor(TOUCH_DIAGNOSTIC_ID).set(IO[i].DebugValue));
+      #endif
     }
   }
 }
@@ -1011,13 +1016,13 @@ void loop() {
   // Reading inputs & adjusting outputs
   if(Iterations > 0)  {
     for(int i=0; i<Iterations; i++) {
-      TouchValueAggregated[i] = IO[i].ReadInput(TOUCH_THRESHOLD, LONGPRESS_DURATION, DEBOUNCE_VALUE);
+      IO[i].ReadInput(TOUCH_THRESHOLD, LONGPRESS_DURATION, DEBOUNCE_VALUE);
     }
     UpdateIO();
     if(LongpressDetection > 0)  {
       for(int j=0; j<2; j++)  {
         for(int i=0; i<Iterations; i++) {
-          TouchValueAggregated[i] = IO[i].ReadInput(TOUCH_THRESHOLD, LONGPRESS_DURATION, DEBOUNCE_VALUE);
+          IO[i].ReadInput(TOUCH_THRESHOLD, LONGPRESS_DURATION, DEBOUNCE_VALUE);
         }
         UpdateIO();
       }
@@ -1033,6 +1038,7 @@ void loop() {
         send(MsgSTATUS.setSensor(SPECIAL_BUTTON_ID).set(true));
         #endif
       }
+      LongpressDetection = 0;
     }
     if(HardwareVariant == 0 && LoadVariant == 2)  {
       UpdateRS();

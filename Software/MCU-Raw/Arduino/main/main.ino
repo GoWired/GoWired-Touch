@@ -92,7 +92,7 @@ void setup()  {
       for(int i=0; i<HardwareVariant; i++)  {
         EEPROM.get(EPPROM_Address[i], RecoveredState);
         if(RecoveredState < 2)  {
-          IO[i].NewState = RecoveredState;
+          IO[i].SetState(RecoveredState);
         }
       }      
     }
@@ -117,7 +117,7 @@ void setup()  {
     // Restore saved state
     if(RememberStates)  {
       IO[0].SetRelay();
-      AdjustLEDs(IO[0].NewState, 0);
+      AdjustLEDs(IO[0].ReadNewState(), 0);
     }
     else  {
       // Turn on LED
@@ -147,7 +147,7 @@ void setup()  {
     if(RememberStates)  {
       for(int i=0; i<2; i++)  {
         IO[i].SetRelay();
-        AdjustLEDs(IO[i].NewState, i);
+        AdjustLEDs(IO[i].ReadNewState(), i);
       }
     }
     else  {
@@ -213,22 +213,25 @@ void AdjustLEDs(bool State, uint8_t Dimmer) {
 // Check Inputs and adjust outputs
 void UpdateIO() {
 
+  bool NewState[LoadVariant];
+
   for(int i=0; i<LoadVariant; i++)  {
-    IO[i].ReadInput(TOUCH_THRESHOLD, /*LONGPRESS_DURATION,*/ DEBOUNCE_VALUE, Monostable);
-    if(IO[i].NewState != IO[i].OldState)  {
+    IO[i].ReadInput(TOUCH_THRESHOLD, DEBOUNCE_VALUE, Monostable);
+    NewState[i] = IO[i].ReadNewState();
+    if(NewState[i] != IO[i].ReadState())  {
       if(RollerShutter) {
-        if(IO[0].OldState || IO[1].OldState)  {
+        if(IO[i].ReadState())  {
           // Stop
           for(int j=0; j<LoadVariant; j++)  {
-            IO[j].NewState = 0;            
+            IO[j].SetState(0);            
             IO[j].SetRelay();
             AdjustLEDs(false, j);
           }
         }
         else  {
           IO[i].SetRelay();
-          AdjustLEDs(IO[i].NewState, i);
-          if(IO[i].NewState)  {
+          AdjustLEDs(IO[i].ReadNewState(), i);
+          if(IO[i].ReadNewState())  {
             RSTimer = millis();
             RSReset = true;
           }
@@ -237,7 +240,7 @@ void UpdateIO() {
       else  {
         if(!Monostable) {
           IO[i].SetRelay();
-          AdjustLEDs(IO[i].NewState, i);
+          AdjustLEDs(IO[i].ReadNewState(), i);
         }
         // Saving state to eeprom
         //EEPROM.put(EPPROM_Address[i], IO[i].NewState);
@@ -266,7 +269,7 @@ void loop() {
   if(RollerShutter == true) {
     if((millis() > RSTimer + RS_INTERVAL) && RSReset)  {
       for(int i=0; i<2; i++)  {
-        IO[i].NewState = 0;
+        IO[i].SetState(0);
         IO[i].SetRelay();
         AdjustLEDs(false, i);
       }

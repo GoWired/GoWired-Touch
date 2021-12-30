@@ -97,8 +97,8 @@
 #define HARDWARE_DETECTION_PIN ANALOG_PIN_5 // Pin to determina Hardware variant of shield
 
 // Reading inputs
-#define TOUCH_THRESHOLD 10                  // A threshold to determine if it was a touch what was sensed (default 5, max. 65535)
-#define DEBOUNCE_VALUE 20                   // Debounce time in ms (1 - no debounce, >1 active debounce, default 20, max. 255)
+#define TOUCH_THRESHOLD 10                  // A threshold to determine if it was a touch what was sensed (default 10, max. 255)
+#define DEBOUNCE_VALUE 100                   // Debounce time in ms (0 - no debounce, >0 active debounce, default 100, max. 255)
 #define LONGPRESS_DURATION 1000             // Duration of longpress in ms (default 1000, max. 65535)
 #define TOUCH_DIAG_TRESHOLD 10              // 
 
