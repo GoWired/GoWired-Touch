@@ -1,31 +1,21 @@
 /*
  * GoWired is an open source project for WIRED home automation. It aims at making wired
- * home automation easy and affordable for every home automation enthusiast. GoWired provides:
- * - hardware (https://www.crowdsupply.com/domatic/getwired),
- * - software (https://github.com/GoWired/GoWired-Project/tree/master/Software), 
- * - 3D printable enclosures (https://github.com/GoWired/GoWired-Project/tree/master/Enclosures),
- * - instructions (both campaign page / campaign updates and our GitHub wiki).
+ * home automation easy and affordable for every home automation enthusiast. GoWired provides
+ * hardware, software, enclosures and instructions necessary to build your own bus communicating
+ * smart home installation.
  * 
- * GetWired is based on RS485 industrial communication standard. The software is an implementation
- * of MySensors communication protocol (http://www.mysensors.org). 
+ * GetWired is based on RS485 industrial communication standard. The software uses MySensors
+ * communication protocol (http://www.mysensors.org). 
  *
  * Created by feanor-anglin
- * Copyright (C) 2018-2021 feanor-anglin
+ * Copyright (C) 2018-2022 feanor-anglin
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
  * version 3 as published by the Free Software Foundation.
  *
- *******************************
- *
- * REVISION HISTORY
- * Version 0.0.0 - feanor-anglin
- *
- * DESCRIPTION version 0.0.0
- * This is code for GoWired MCU Touch.
- * 
- * Hardware serial is used with baud rate of 57600 by default.
- * 
+ * ******************************
+ * This is source code for GoWired Touch MCU boards working with 2Relay or RGBW shields.
  * 
  */
 
@@ -202,7 +192,12 @@ void setup() {
 
   // Initializing POWER SENSOR
   #if defined(POWER_SENSOR)
-    PS.SetValues(PS_PIN, MVPERAMP, RECEIVER_VOLTAGE, MAX_CURRENT, POWER_MEASURING_TIME, Vcc);
+    if(HardwareVariant == 0)  {
+      PS.SetValues(PS_PIN, MVPERAMP, 230, MAX_CURRENT, POWER_MEASURING_TIME, Vcc);
+    }
+    else if(HardwareVariant == 1) {
+      PS.SetValues(PS_PIN, MVPERAMP, 24, 6, POWER_MEASURING_TIME, Vcc);
+    }
   #endif
 
   // Initializing inputs & outputs
@@ -638,19 +633,7 @@ void receive(const MyMessage &message)  {
         RSCalibration(Vcc);
       }
     }
-    if(message.sensor == SECRET_CONFIG_ID_2)  {
-      if(HardwareVariant == 0 && LoadVariant == 2)  {
-        // Roller shutter: swap inputs
-        IO[RS_ID].SetValues(RELAY_OFF, RELAY_ON, 1, TOUCH_FIELD_2, INPUT_PIN_2, RELAY_PIN_2);
-        IO[RS_ID + 1].SetValues(RELAY_OFF, RELAY_ON, 1, TOUCH_FIELD_1, INPUT_PIN_1, RELAY_PIN_1);
-      }
-    }
-    if(message.sensor == SECRET_CONFIG_ID_3)  {
-      // Roller shutter: swap outputs
-      if(HardwareVariant == 0 && LoadVariant == 2)  {
-        RS.SetOutputs(RELAY_PIN_2, RELAY_PIN_1, RELAY_ON, RELAY_OFF);
-      }
-    }
+    // More secret config options will appear here in the future
   }
   // Percentage messages
   else if (message.type == V_PERCENTAGE) {

@@ -1,3 +1,7 @@
+/*
+ * Dimmer.h
+ */
+
 #ifndef Dimmer_h
 #define Dimmer_h
 
