@@ -95,7 +95,7 @@
 
 /* Reliability */
 // Watchdog
-#define ENABLE_WATCHDOG
+//#define ENABLE_WATCHDOG
 
 /* EEPROM Addresses */
 #define SIZE_OF_BYTE 1
