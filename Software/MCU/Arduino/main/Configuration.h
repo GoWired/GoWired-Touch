@@ -1,7 +1,7 @@
 /*
  * Configuration.h file
- * Use this file for quick and easy configuration of your GetWired software.
- * For the whole description have a look at .ino file.
+ * With this file it is possible to configure some advanced features of the software,
+ * such as board pinout, communication parameters, backlight parameters, system components.
  * 
  */
 
@@ -52,7 +52,7 @@
                     MySensors Definitions
  *  *******************************************************************************************/
 // Identification
-#define MY_NODE_ID 10                            // Set node ID
+#define MY_NODE_ID AUTO                            // Set node ID
 #define SN "GoWired Touch Module"               // Set node name to present to a controller
 #define SV "1.0"                                // Set sensor version
 
@@ -74,7 +74,7 @@
  *  *******************************************************************************************/
 // Output Config - one of these has to be defined
 //#define SINGLE_RELAY
-#define DOUBLE_RELAY              // Define this node as a double relay node, setting below
+//#define DOUBLE_RELAY              // Define this node as a double relay node, setting below
 //#define ROLLER_SHUTTER            // Define this node as a roller shutter node, setting below
 //#define DIMMER                    // Define this node as a 1-channel dimmer node, setting below
 //#define RGB                       // Define this node as a RGB dimmer node, setting below
@@ -84,7 +84,7 @@
 #define POWER_SENSOR
 
 // Onboard temperature sensor - SHT30
-#define SHT30
+//#define SHT30
 
 /*  *******************************************************************************************
                     Various Definitions
@@ -97,9 +97,10 @@
 #define HARDWARE_DETECTION_PIN ANALOG_PIN_5 // Pin to determina Hardware variant of shield
 
 // Reading inputs
-#define TOUCH_THRESHOLD 5                   // A threshold to determine if it was a touch what was sensed (default 5, max. 65535)
-#define DEBOUNCE_VALUE 20                   // Debounce time in ms (1 - no debounce, >1 active debounce, default 20, max. 255)
+#define TOUCH_THRESHOLD 10                  // A threshold to determine if it was a touch what was sensed (default 10, max. 255)
+#define DEBOUNCE_VALUE 100                   // Debounce time in ms (0 - no debounce, >0 active debounce, default 100, max. 255)
 #define LONGPRESS_DURATION 1000             // Duration of longpress in ms (default 1000, max. 65535)
+#define TOUCH_DIAG_TRESHOLD 10              // 
 
 // Power Sensor
 #define MAX_CURRENT 10                      // Maximum current the module can handle before reporting error (2SSR - 3; 4RelayDin - 10A or 16)
@@ -114,14 +115,11 @@
 #define DIMMING_TOGGLE_STEP 20              // Value to increase dimming percentage when using wall switch
 
 // Roller Shutter
-#define RS_AUTO_CALIBRATION                 // Roller shutter auto-calibration. Leave it defined or comment it out and define movement times manually
-#ifdef RS_AUTO_CALIBRATION
-  #define PS_OFFSET 0.2                     // Power sensor offset for roller shutter calibration (default 0.2)
-  #define CALIBRATION_SAMPLES 2             // Number of calibration samples for roller shutter calibration (default 2)
-#else
-  #define UP_TIME 21                        // Manually defined upward movement time in seconds (0-255)
-  #define DOWN_TIME 20                      // Manually defined downward movement time in seconds (0-255)
-#endif
+//#define RS_AUTO_CALIBRATION                 // Roller shutter auto-calibration. Leave it defined or comment it out and define movement times manually
+#define PS_OFFSET 0.2                     // Power sensor offset for roller shutter calibration (default 0.2)
+#define CALIBRATION_SAMPLES 2             // Number of calibration samples for roller shutter calibration (default 2)
+#define UP_TIME 21                        // Manually defined upward movement time in seconds (0-255)
+#define DOWN_TIME 20                      // Manually defined downward movement time in seconds (0-255)
 
 // LP5009
 #define R_VALUE_OFF 0
@@ -130,6 +128,9 @@
 #define R_VALUE_ON 255
 #define G_VALUE_ON 127
 #define B_VALUE_ON 0
+#define R_VALUE_INACTIVE 255
+#define G_VALUE_INACTIVE 0
+#define B_VALUE_INACTIVE 0
 #define BRIGHTNESS_VALUE_OFF 20
 #define BRIGHTNESS_VALUE_ON 40
 #define RAINBOW_DURATION 2000          // Duration of initial rainbow effect (0-65535, default 1000)
@@ -143,14 +144,14 @@
 
 // Other
 #define INTERVAL 300000                     // Interval value for reporting readings of the sensors: temperature, power usage (default 300000)
-#define INIT_DELAY 200                      // A value to be multiplied by node ID value to obtain the time to wait during the initialization process
+//#define INIT_DELAY 200                      // A value to be multiplied by node ID value to obtain the time to wait during the initialization process
 #define PRESENTATION_DELAY 10               // Time (ms) to wait between subsequent presentation messages (default 10)
 #define LOOP_TIME 80                        // Main loop wait time (default 100)
 
 /*  *******************************************************************************************
                     OUTPUT Config
  *  *******************************************************************************************/
-// IDs - change to just 2 instances
+// IDs
 #define RELAY_ID_1 0
 #define RELAY_ID_2 1
 #define RS_ID 0
@@ -201,7 +202,7 @@
 /*  *******************************************************************************************
                       ERROR REPORTING & PREVENTION
  *  *******************************************************************************************/
-#define ENABLE_WATCHDOG 
+#define ENABLE_WATCHDOG
 
 #define ELECTRONIC_FUSE
 #ifdef ELECTRONIC_FUSE
@@ -212,10 +213,22 @@
   #define ETS_ID 11
 #endif
 
+#define TOUCH_AUTO_DIAGNOSTICS
+
 //#define RS485_DEBUG
 #ifdef RS485_DEBUG
+  // Report text debug
   #define DEBUG_ID 12
+  // Reporting touch readings
+  #define TOUCH_DIAGNOSTIC_ID 13
 #endif
+
+/*  *******************************************************************************************
+                      SECRET CONFIGURATION
+ *  *******************************************************************************************/
+#define SECRET_CONFIG_ID_1 20
+#define SECRET_CONFIG_ID_2 21
+#define SECRET_CONFIG_ID_3 22
 
 /*  *******************************************************************************************
                     EEPROM Definitions

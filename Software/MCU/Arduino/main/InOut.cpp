@@ -1,10 +1,15 @@
+/*
+ * InOut.cpp
+ */
+
 #include "InOut.h"
 
 // Constructor
 InOut::InOut()  {
   
-  NewState = 0;
-  OldState = 0;
+  _NewState = 0;
+  _State = 0;
+  DebugValue = 0;
 }
 
 // Set Values - initialization
@@ -33,104 +38,123 @@ void InOut::SetValues(bool RelayOFF, bool RelayON, uint8_t Type, uint8_t Pin1, u
       break;
   }
 
-  // Measure reference value
+  ReadReference();
+}
+
+// Measure touch field reference value
+void InOut::ReadReference()  {
+
   _TouchReference = ADCTouch.read(_SensorPin, 500);         // ADCTouch.read(pin, number of samples)
 }
 
-void InOut::ReadInput(uint16_t Threshold, uint16_t LongpressDuration, uint8_t DebounceValue)  {
+// Return _NewState
+uint8_t InOut::ReadNewState() {
 
-  bool ExternalButtonState = true;
+  return _NewState;
+}
+
+uint8_t InOut::ReadState()  {
+
+  return _State;
+}
+
+// Set _NewState
+void InOut::SetState(uint8_t NewState)  {
+
+  _NewState = NewState;
+  DebugValue = 3;
+}
+
+// Read analog & digital inputs
+void InOut::ReadInput(uint8_t Threshold, uint16_t LongpressDuration, uint8_t DebounceValue) {
+
+  bool Reading;
   bool Shortpress = false;
-  bool Longpress = false;
-  int Value;
   uint32_t StartTime = millis();
-  
-  do {
 
-    Value = ADCTouch.read(_SensorPin, 20);
-    Value -= _TouchReference;
-
-    if(SensorType == 1) {
-      ExternalButtonState = digitalRead(_SensorPin2);
+  do  {
+    Reading = _ReadAnalog(Threshold);
+    
+    if(SensorType == 1 && !Reading) {
+      Reading = _ReadDigital(DebounceValue);
     }
 
-    if(millis() - StartTime > DebounceValue) {
+    if(!Shortpress && Reading) {
+      _NewState = !_State;
       Shortpress = true;
     }
 
     if(millis() - StartTime > LongpressDuration) {
-      Longpress = true;
+      _NewState = 2;
       break;
     }
 
     if(millis() < StartTime)  {
       StartTime = millis();
     }
-  } while(!ExternalButtonState || (Value > Threshold));
-
-  if(!Longpress)  {
-    if(Shortpress)  {
-      NewState = OldState == 1 ? 0 : 1;
-    }
-  }
-  else  {
-    NewState = 2;
-  }
+  } while(Reading);
 }
 
-/*// Check digital input
-void InOut::DigitalInput()  {
+// Read analog input
+bool InOut::_ReadAnalog(uint8_t Threshold)  {
 
-  if(digitalRead(_SensorPin2) != LOW) {
-    _HighStateDetection = true;
-    _LowStateDetection = false;
-    _Condition = false;
+  int TouchValue;
+  bool ButtonState = false;
+
+  TouchValue = ADCTouch.read(_SensorPin, 64);
+  TouchValue -= _TouchReference;
+  TouchDiagnosisValue = TouchValue;
+
+  if(TouchValue > Threshold)  {
+    ButtonState = true;
+    DebugValue = 1;
   }
-  else  {
-    if(_HighStateDetection == true) {
-      _LowStateDetection = true;
-    }
-  }
-  if(_LowStateDetection == true)  {
-    NewState = !OldState;
-  }
+
+  return ButtonState;
 }
 
-// Check analog input
-void InOut::AnalogInput(uint16_t Threshold, bool Monostable) {
-  
-  bool ButtonPressed = false;
-  uint16_t Value = ADCTouch.read(_SensorPin);
-  Value -= _TouchReference;
+// Read digital input
+bool InOut::_ReadDigital(uint8_t DebounceValue) {
 
-  if(Value > Threshold) {
-    ButtonPressed = true;
-  }
+  bool DigitalReading;
+  bool PreviousReading = false;
+  bool InputState = false;
+  uint32_t Timeout = millis();
+  uint32_t StartTime = Timeout;
 
-  if(Monostable != true)  {
-    if(ButtonPressed == true) {
-      NewState = !OldState;
+  do {
+    DigitalReading = !digitalRead(_SensorPin2);
+
+    if(DigitalReading && !PreviousReading)  {
+      StartTime = millis();
     }
-    else  {
-      if(ButtonPressed == true) {
-        NewState = 1;
-      }
-      else  {
-        NewState = 0;
+
+    if(millis() - StartTime > DebounceValue)  {
+      if(DigitalReading) {
+        InputState = true;
+        DebugValue = 2;
       }
     }
-  }
-}*/
+    
+    if(millis() - Timeout > 255 || millis() < StartTime) {
+      break;
+    }
+
+    PreviousReading = DigitalReading;
+  } while(DigitalReading);
+
+  return InputState;
+}
 
 // Set Relay
 void InOut::SetRelay() {
 
-  if(NewState == 1)  {
+  if(_NewState == 1)  {
     digitalWrite(_RelayPin, _RelayON);
   }
   else  {
     digitalWrite(_RelayPin, _RelayOFF);
   }
   
-  OldState = NewState;
+  _State = _NewState;
 }

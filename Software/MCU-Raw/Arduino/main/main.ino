@@ -1,5 +1,23 @@
 /*
- *  
+ * GoWired is an open source project for WIRED home automation. It aims at making wired
+ * home automation easy and affordable for every home automation enthusiast. GoWired provides
+ * hardware, software, enclosures and instructions necessary to build your own bus communicating
+ * smart home installation.
+ * 
+ * GetWired is based on RS485 industrial communication standard. The software uses MySensors
+ * communication protocol (http://www.mysensors.org). 
+ *
+ * Created by feanor-anglin
+ * Copyright (C) 2018-2022 feanor-anglin
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * version 3 as published by the Free Software Foundation.
+ *
+ * ******************************
+ * This is source code for GoWired Touch MCU Raw boards (no communication 
+ * variant of GoWired Touch).
+ * 
  */
 
 
@@ -13,7 +31,8 @@
 
 // Globals
 // 1 - 1 output; 2 - 2 outputs
-uint8_t HardwareVariant;                    // Auto detecting connected hardware
+uint8_t HardwareVariant;                    // Variant of connected hardware: 0 - Power Board AC, 1 - Power Board DC
+uint8_t LoadVariant;                        // Variant of connected load: 1 - One input/output; 2 - Two inputs/outputs
 bool RollerShutter = false;                 // false - lighting; true - roller shutter
 bool Monostable = false;
 bool RememberStates = false;
@@ -30,8 +49,8 @@ InOut IO[NUMBER_OF_BUTTONS];
 
 Dimmer D[NUMBER_OF_BUTTONS];
 
-// Before
-void before() {
+// Setup
+void setup()  {
 
   #ifdef ENABLE_WATCHDOG
     wdt_reset();
@@ -39,36 +58,23 @@ void before() {
     wdt_disable();
   #endif
 
-}
+  delay(2000);
 
-// Setup
-void setup()  {
+  // Resistive hardware detection
 
-  //float Vcc = ReadVcc();  // mV
+  uint16_t ReadHardware = analogRead(HARDWARE_DETECTION_PIN);
 
-  // Temporary code to substitute hardware variant detection
-  #ifdef SINGLE_RELAY
+  if(ReadHardware < 20) {
+    // Hardware variant: Power Board AC
+    HardwareVariant = 0;
+  }
+  else if(ReadHardware < 50)  {
+    // Hardware variant: Power Board DC
     HardwareVariant = 1;
-  #elif defined(DOUBLE_RELAY)
-    HardwareVariant = 2;
-  #endif
-
-  // Hardware auto detection
-  /*uint16_t ADCValue = analogRead(VERSION_DETECT_PIN);
-
-  // Version A - 1 relay, 1 button
-  if(ADCValue < 20) {
-    Version = 1;  
   }
-  // Version B - 2 relays, 2 buttons
-  else if(ADCValue > 20 && ADCValue < 30)  {
-    Version = 2;  
-  }
-  // Version DC - 2 open collector outputs
-  else if(ADC > 30 && ADCValue < 40)  {
-    Version = 3;
-  }*/
+  else  {/* Handling error */}
 
+  // Reading dip switches
   pinMode(DIP_SWITCH_1, INPUT_PULLUP);
   pinMode(DIP_SWITCH_2, INPUT_PULLUP);
   pinMode(DIP_SWITCH_3, INPUT_PULLUP);
@@ -78,9 +84,10 @@ void setup()  {
 
   // Reading dip switch 1
   if(!digitalRead(DIP_SWITCH_1)) {
-    if(HardwareVariant == 2)  {
-      RollerShutter = true;
-    }
+    LoadVariant = 1;
+  }
+  else  {
+    LoadVariant = 2;
   }
 
   // Reading dip switch 2
@@ -90,27 +97,27 @@ void setup()  {
 
   // Reading dip switch 3
   if(!digitalRead(DIP_SWITCH_3)) {
+    if(HardwareVariant == 0)  {
+      RollerShutter = true;
+    }
+  }
+
+  // Reading dip switch 4
+  if(!digitalRead(DIP_SWITCH_4)) {
     if(!Monostable && !RollerShutter) {
       RememberStates = true;
       uint8_t RecoveredState;
       for(int i=0; i<HardwareVariant; i++)  {
         EEPROM.get(EPPROM_Address[i], RecoveredState);
         if(RecoveredState < 2)  {
-          IO[i].NewState = RecoveredState;
+          IO[i].SetState(RecoveredState);
         }
       }      
     }
   }
 
-  // Reading dip switch 4
-  if(!digitalRead(DIP_SWITCH_4)) {
-    // clear eeprom
-    // clear load variant, eeprom states
-    // for future use
-  }
-
   // One button variant
-  if(HardwareVariant == 1)  {
+  if(LoadVariant == 1)  {
     // Initialize LEDs
     D[0].SetValues(NUMBER_OF_CHANNELS, DIMMING_STEP, DIMMING_INTERVAL, LED_PIN_7, LED_PIN_8, LED_PIN_9);
 
@@ -118,12 +125,17 @@ void setup()  {
     RainbowLED(INIT_RAINBOW_DURATION, INIT_RAINBOW_RATE);
 
     // Initializing and calibrating button
-    IO[0].SetValues(RELAY_OFF, RELAY_ON, 1, TOUCH_FIELD_3, INPUT_PIN_1, RELAY_PIN_1);
+    if(HardwareVariant == 0) {
+      IO[0].SetValues(RELAY_OFF, RELAY_ON, 1, TOUCH_FIELD_3, INPUT_PIN_1, RELAY_PIN_1);
+    }
+    else if(HardwareVariant == 1) {
+      IO[0].SetValues(RELAY_OFF, RELAY_ON, 2, TOUCH_FIELD_3, RELAY_PIN_1);
+    }
 
     // Restore saved state
     if(RememberStates)  {
       IO[0].SetRelay();
-      AdjustLEDs(IO[0].NewState, 0);
+      AdjustLEDs(IO[0].ReadNewState(), 0);
     }
     else  {
       // Turn on LED
@@ -131,7 +143,7 @@ void setup()  {
     }
   }
   // Two buttons variant
-  else if(HardwareVariant == 2) {
+  else if(LoadVariant == 2) {
     // Initialize LEDs
     D[0].SetValues(NUMBER_OF_CHANNELS, DIMMING_STEP, DIMMING_INTERVAL, LED_PIN_1, LED_PIN_2, LED_PIN_3);
     D[1].SetValues(NUMBER_OF_CHANNELS, DIMMING_STEP, DIMMING_INTERVAL, LED_PIN_4, LED_PIN_5, LED_PIN_6);
@@ -140,14 +152,20 @@ void setup()  {
     RainbowLED(INIT_RAINBOW_DURATION, INIT_RAINBOW_RATE);
     
     // Initializing and calibrating buttons
-    IO[0].SetValues(RELAY_OFF, RELAY_ON, 1, TOUCH_FIELD_1, INPUT_PIN_1, RELAY_PIN_1);
-    IO[1].SetValues(RELAY_OFF, RELAY_ON, 1, TOUCH_FIELD_2, INPUT_PIN_2, RELAY_PIN_2);
+    if(HardwareVariant == 0) {
+      IO[0].SetValues(RELAY_OFF, RELAY_ON, 1, TOUCH_FIELD_1, INPUT_PIN_1, RELAY_PIN_1);
+      IO[1].SetValues(RELAY_OFF, RELAY_ON, 1, TOUCH_FIELD_2, INPUT_PIN_2, RELAY_PIN_2);
+    }
+    else if(HardwareVariant == 1) {
+      IO[0].SetValues(RELAY_OFF, RELAY_ON, 2, TOUCH_FIELD_1, RELAY_PIN_1);
+      IO[1].SetValues(RELAY_OFF, RELAY_ON, 2, TOUCH_FIELD_2, RELAY_PIN_2);
+    }
 
     // Restore saved states
     if(RememberStates)  {
       for(int i=0; i<2; i++)  {
         IO[i].SetRelay();
-        AdjustLEDs(IO[i].NewState, i);
+        AdjustLEDs(IO[i].ReadNewState(), i);
       }
     }
     else  {
@@ -176,7 +194,7 @@ void RainbowLED(uint16_t Duration, uint8_t Rate)	{
 	
   while(millis() < StartTime + Duration)	{
 
-    for(int i=1; i<=HardwareVariant; i++)  {
+    for(int i=1; i<=LoadVariant; i++)  {
       D[i-1].UpdateLEDs(BRIGHTNESS_VALUE_ON, RValue, GValue, BValue);
     }
 	
@@ -213,22 +231,25 @@ void AdjustLEDs(bool State, uint8_t Dimmer) {
 // Check Inputs and adjust outputs
 void UpdateIO() {
 
-  for(int i=0; i<HardwareVariant; i++)  {
-    IO[i].ReadInput(TOUCH_THRESHOLD, /*LONGPRESS_DURATION,*/ DEBOUNCE_VALUE, Monostable);
-    if(IO[i].NewState != IO[i].OldState)  {
+  bool NewState[LoadVariant];
+
+  for(int i=0; i<LoadVariant; i++)  {
+    IO[i].ReadInput(TOUCH_THRESHOLD, DEBOUNCE_VALUE, Monostable);
+    NewState[i] = IO[i].ReadNewState();
+    if(NewState[i] != IO[i].ReadState())  {
       if(RollerShutter) {
-        if(IO[0].OldState || IO[1].OldState)  {
+        if(IO[i].ReadState())  {
           // Stop
-          for(int j=0; j<HardwareVariant; j++)  {
-            IO[j].NewState = 0;            
+          for(int j=0; j<LoadVariant; j++)  {
+            IO[j].SetState(0);            
             IO[j].SetRelay();
             AdjustLEDs(false, j);
           }
         }
         else  {
           IO[i].SetRelay();
-          AdjustLEDs(IO[i].NewState, i);
-          if(IO[i].NewState)  {
+          AdjustLEDs(IO[i].ReadNewState(), i);
+          if(IO[i].ReadNewState())  {
             RSTimer = millis();
             RSReset = true;
           }
@@ -237,7 +258,7 @@ void UpdateIO() {
       else  {
         if(!Monostable) {
           IO[i].SetRelay();
-          AdjustLEDs(IO[i].NewState, i);
+          AdjustLEDs(IO[i].ReadNewState(), i);
         }
         // Saving state to eeprom
         //EEPROM.put(EPPROM_Address[i], IO[i].NewState);
@@ -266,7 +287,7 @@ void loop() {
   if(RollerShutter == true) {
     if((millis() > RSTimer + RS_INTERVAL) && RSReset)  {
       for(int i=0; i<2; i++)  {
-        IO[i].NewState = 0;
+        IO[i].SetState(0);
         IO[i].SetRelay();
         AdjustLEDs(false, i);
       }

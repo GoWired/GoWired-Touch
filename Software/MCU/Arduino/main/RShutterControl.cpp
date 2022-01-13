@@ -7,15 +7,7 @@
 /*  *******************************************************************************************
  *                                      Constructor
  *  *******************************************************************************************/
-RShutterControl::RShutterControl(uint8_t UpPin, uint8_t DownPin, bool RelayOn, bool RelayOff)  {
-
-  _DownPin = DownPin;
-  _UpPin = UpPin;
-  _RelayOn = RelayOn;
-  _RelayOff = RelayOff;
-  
-  pinMode(_UpPin, OUTPUT);  digitalWrite(_UpPin, RelayOff);
-  pinMode(_DownPin, OUTPUT);  digitalWrite(_DownPin, RelayOff);
+RShutterControl::RShutterControl()  {
 
   NewState = 2;
   State = 2;
@@ -35,7 +27,17 @@ RShutterControl::RShutterControl(uint8_t UpPin, uint8_t DownPin, bool RelayOn, b
   else  {
     Calibrated = false;
   }
+}
 
+void RShutterControl::SetOutputs(uint8_t UpPin, uint8_t DownPin, bool RelayOn, bool RelayOff)  {
+
+  _DownPin = DownPin;
+  _UpPin = UpPin;
+  _RelayOn = RelayOn;
+  _RelayOff = RelayOff;
+
+  pinMode(_UpPin, OUTPUT);  digitalWrite(_UpPin, RelayOff);
+  pinMode(_DownPin, OUTPUT);  digitalWrite(_DownPin, RelayOff);
 }
 
 /*  *******************************************************************************************
@@ -45,9 +47,12 @@ void RShutterControl::Calibration(uint8_t UpTime, uint8_t DownTime)  {
   
   Position = 0;
 
-  _UpTime = UpTime;
-  _DownTime = DownTime;
+  // Save movement durations to internal variables simulaneously inceasing both values by 1s
+  // to ensure the roller shutter won't stop to early
+  _UpTime = UpTime + 1;
+  _DownTime = DownTime + 1;
 
+  // Save values to EEPROM
   EEPROM.put(EEA_RS_TIME_DOWN, _DownTime);
   EEPROM.put(EEA_RS_TIME_UP, _UpTime);
   EEPROM.put(EEA_RS_POSITION, Position);

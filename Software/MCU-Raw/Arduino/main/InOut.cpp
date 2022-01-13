@@ -1,10 +1,14 @@
+/*
+ * InOut.cpp
+ */
+
 #include "InOut.h"
 
 // Constructor
 InOut::InOut()  {
   
-  NewState = 0;
-  OldState = 0;
+  _NewState = 0;
+  _State = 0;
 }
 
 // Set Values - initialization
@@ -19,7 +23,7 @@ void InOut::SetValues(bool RelayOFF, bool RelayON, uint8_t Type, uint8_t Pin1, u
     case 0:
       _SensorPin = Pin1;
       break;
-    // Touch Field + External button + Relay (2Relay)
+    // Touch field + external button + output
     case 1:
       _SensorPin = Pin1;
       _SensorPin2 = Pin2;
@@ -28,6 +32,12 @@ void InOut::SetValues(bool RelayOFF, bool RelayON, uint8_t Type, uint8_t Pin1, u
       pinMode(_RelayPin, OUTPUT);
       digitalWrite(_RelayPin, _RelayOFF);
       break;
+    // Touch field + output
+    case 2:
+      _SensorPin = Pin1;
+      _RelayPin = Pin2;
+      pinMode(_RelayPin, OUTPUT);
+      digitalWrite(_RelayPin, _RelayOFF);
     // Default case
     default:
       break;
@@ -37,59 +47,113 @@ void InOut::SetValues(bool RelayOFF, bool RelayON, uint8_t Type, uint8_t Pin1, u
   _TouchReference = ADCTouch.read(_SensorPin, 500);
 }
 
-void InOut::ReadInput(uint16_t Threshold, uint8_t DebounceValue, bool Monostable)  {
+// Return _NewState
+uint8_t InOut::ReadNewState() {
 
-  bool ExternalButtonState = true;
-  bool LowStateDetection = false;
-  int Value;
-  uint32_t StartTime = millis();
-  
-  do {
-    Value = ADCTouch.read(_SensorPin, 20);
-    Value -= _TouchReference;
+  return _NewState;
+}
 
-    if(SensorType == 1) {
-      ExternalButtonState = digitalRead(_SensorPin2);
-    }
+// Return _State
+uint8_t InOut::ReadState()  {
 
-    if(millis() - StartTime > DebounceValue) {
-      LowStateDetection = true;
+  return _State;
+}
+
+// Set _NewState
+void InOut::SetState(uint8_t NewState)  {
+
+  _NewState = NewState;
+}
+
+void InOut::ReadInput(uint16_t Threshold, uint8_t DebounceValue, bool Monostable) {
+
+  bool Reading;
+  bool Shortpress = false;
+
+  do  {
+    Reading = _ReadAnalog(Threshold);
+    
+    if(SensorType == 1 && !Reading) {
+      Reading = _ReadDigital(DebounceValue);
     }
 
     if(Monostable)  {
-      if(LowStateDetection && !NewState) {
-        NewState = 1;
+      if(!Shortpress && Reading)  {
+        _NewState = !_State;  Shortpress = true;
+        SetRelay();
+      }
+      else if(Shortpress && !Reading) {
+        _NewState = !_State;  Shortpress = false;
         SetRelay();
       }
     }
+    else  {
+      if(!Shortpress && Reading) {
+        _NewState = !_State;
+        Shortpress = true;
+      }
+    }
+  } while(Reading);
+}
 
-    if(millis() < StartTime)  {
+// Read analog input
+bool InOut::_ReadAnalog(uint8_t Threshold)  {
+
+  int TouchValue;
+  bool ButtonState = false;
+
+  TouchValue = ADCTouch.read(_SensorPin, 64);
+  TouchValue -= _TouchReference;
+  TouchDiagnosisValue = TouchValue;
+
+  if(TouchValue > Threshold)  {
+    ButtonState = true;
+  }
+
+  return ButtonState;
+}
+
+// Read digital input
+bool InOut::_ReadDigital(uint8_t DebounceValue) {
+
+  bool DigitalReading;
+  bool PreviousReading = false;
+  bool InputState = false;
+  uint32_t Timeout = millis();
+  uint32_t StartTime = Timeout;
+
+  do {
+    DigitalReading = !digitalRead(_SensorPin2);
+
+    if(DigitalReading && !PreviousReading)  {
       StartTime = millis();
     }
-  } while(!ExternalButtonState || (Value > Threshold));
 
-  if(!Monostable) {
-    if(LowStateDetection) {
-      NewState = OldState == 1 ? 0 : 1;
+    if(millis() - StartTime > DebounceValue)  {
+      if(DigitalReading) {
+        InputState = true;
+      }
     }
-  }
-  else  {
-    if(NewState)  {
-      NewState = 0;
-      SetRelay();
+    
+    if(millis() - Timeout > 255 || millis() < StartTime) {
+      break;
     }
-  }
+
+    PreviousReading = DigitalReading;
+  } while(DigitalReading);
+
+  return InputState;
 }
 
 // Set Relay
 void InOut::SetRelay() {
 
-  if(NewState == 1)  {
+  if(_NewState == 1)  {
     digitalWrite(_RelayPin, _RelayON);
   }
   else  {
     digitalWrite(_RelayPin, _RelayOFF);
   }
   
-  OldState = NewState;
+  _State = _NewState;
 }

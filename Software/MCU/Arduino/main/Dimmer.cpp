@@ -22,24 +22,13 @@ void Dimmer::SetValues(uint8_t NumberOfChannels, uint8_t DimmingStep, uint8_t Di
 	_NumberOfChannels = NumberOfChannels;
 	_DimmingStep = DimmingStep;
 	_DimmingInterval = DimmingInterval;
-	
-	//_DimmerTime = 0;
 	_DimmerState = false;
 
-	if(_NumberOfChannels == 1)  {
-    _Channels[0] = Pin1;
+  uint8_t Channels[4] = {Pin1, Pin2, Pin3, Pin4};
+
+  for(int i=0; i<_NumberOfChannels; i++)  {
+    _Channels[i] = Channels[i];
   }
-	else if(_NumberOfChannels == 3)	{
-		_Channels[0] = Pin1;
-		_Channels[1] = Pin2;
-		_Channels[2] = Pin3;
-	}
-	else if(_NumberOfChannels == 4)	{
-		_Channels[0] = Pin1;
-		_Channels[1] = Pin2;
-		_Channels[2] = Pin3;
-		_Channels[3] = Pin4;
-	}
 }
 
 // Update Dimmer: New, experimental function which adjust colors and dimming level at the same time
