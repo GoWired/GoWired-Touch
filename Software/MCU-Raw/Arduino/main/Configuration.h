@@ -1,5 +1,7 @@
 /*
- Configuration
+ * Configuration.h file
+ * With this file it is possible to configure some advanced features of the software,
+ * such as board pinout, backlight parameters, system components.
 */
 
 /* Pin Definitions */

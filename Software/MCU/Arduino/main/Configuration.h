@@ -1,7 +1,7 @@
 /*
  * Configuration.h file
- * Use this file for quick and easy configuration of your GetWired software.
- * For the whole description have a look at .ino file.
+ * With this file it is possible to configure some advanced features of the software,
+ * such as board pinout, communication parameters, backlight parameters, system components.
  * 
  */
 
@@ -84,7 +84,7 @@
 #define POWER_SENSOR
 
 // Onboard temperature sensor - SHT30
-#define SHT30
+//#define SHT30
 
 /*  *******************************************************************************************
                     Various Definitions
@@ -151,7 +151,7 @@
 /*  *******************************************************************************************
                     OUTPUT Config
  *  *******************************************************************************************/
-// IDs - change to just 2 instances
+// IDs
 #define RELAY_ID_1 0
 #define RELAY_ID_2 1
 #define RS_ID 0
@@ -202,7 +202,7 @@
 /*  *******************************************************************************************
                       ERROR REPORTING & PREVENTION
  *  *******************************************************************************************/
-#define ENABLE_WATCHDOG 
+#define ENABLE_WATCHDOG
 
 #define ELECTRONIC_FUSE
 #ifdef ELECTRONIC_FUSE
