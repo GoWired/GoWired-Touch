@@ -45,7 +45,7 @@ void RShutterControl::SetOutputs(uint8_t UpPin, uint8_t DownPin, bool RelayOn, b
  *  *******************************************************************************************/
 void RShutterControl::Calibration(uint8_t UpTime, uint8_t DownTime)  {
   
-  Position = 0;
+  //Position = 0;
 
   // Save movement durations to internal variables simulaneously inceasing both values by 1s
   // to ensure the roller shutter won't stop to early
@@ -57,7 +57,7 @@ void RShutterControl::Calibration(uint8_t UpTime, uint8_t DownTime)  {
   EEPROM.put(EEA_RS_TIME_UP, _UpTime);
   EEPROM.put(EEA_RS_POSITION, Position);
 
-  Calibrated = true;
+  //Calibrated = true;
 }
 
 // Read Message
