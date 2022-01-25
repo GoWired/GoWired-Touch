@@ -216,8 +216,10 @@ void setup() {
       IO[RS_ID].SetValues(RELAY_OFF, RELAY_ON, 1, TOUCH_FIELD_1, INPUT_PIN_1, RELAY_PIN_1);
       IO[RS_ID + 1].SetValues(RELAY_OFF, RELAY_ON, 1, TOUCH_FIELD_2, INPUT_PIN_2, RELAY_PIN_2);
       RS.SetOutputs(RELAY_PIN_1, RELAY_PIN_2, RELAY_ON, RELAY_OFF);
-      // Temporary calibration
-      RS.Calibration(UP_TIME, DOWN_TIME);
+      // Temporary calibration (first launch only)
+      if(!RS.Calibrated) {
+        RS.Calibration(UP_TIME, DOWN_TIME);
+      }
     }
   }
   else if(HardwareVariant == 1) {
@@ -543,12 +545,7 @@ void BlinkLEDs(uint8_t InitialState=0) {
     AdjustLEDs(Blink, i);
   }
 
-  if(Blink == 3)  {
-    Blink++;   
-  }
-  else if(Blink == 4) {
-    Blink--; 
-  }
+  Blink = Blink == 3 ? 4 : 3;
 }
 
 // Touch diagnosis
@@ -573,8 +570,8 @@ bool TouchDiagnosis(uint16_t Threshold) {
 void ReadNewReference() {
 
   // Blink LEDs to indicate inactivity and take a break from normal operation
-  for(int i=3; i<5; i++)  {
-    BlinkLEDs(i);
+  for(int i=0; i<5; i++)  {
+    BlinkLEDs();
     delay(1000);
   }
 
@@ -877,6 +874,10 @@ void RSCalibration(float Vcc)  {
   if(DownTime > 1 && UpTime > 1)  {
     RS.Calibration(UpTime, DownTime);
   }
+
+  // Inform Controller about the current state of roller shutter
+  send(MsgSTOP.setSensor(RS_ID));
+  send(MsgPERCENTAGE.setSensor(RS_ID).set(RS.Position));
 
   // Change LED indication to normal again
   for(int i=0; i<Iterations; i++)  {
