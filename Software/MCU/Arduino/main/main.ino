@@ -782,7 +782,15 @@ void UpdateIO() {
               }
             }
             else {
-              AdjustLEDs(0, 0); AdjustLEDs(0, 1); 
+              if(RS.State == 2) {
+                AdjustLEDs(0, 0); AdjustLEDs(0, 1);
+              }
+              else if(RS.State == 1)  {
+                AdjustLEDs(0, 0); AdjustLEDs(1, 1);
+              }
+              else if(RS.State == 0)  {
+                AdjustLEDs(1, 0); AdjustLEDs(0, 1);
+              }
             }
           }
           else if(HardwareVariant == 1) {
