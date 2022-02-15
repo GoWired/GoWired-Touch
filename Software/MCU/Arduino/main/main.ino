@@ -263,29 +263,33 @@ void setup() {
  *  *******************************************************************************************/
 void presentation() {
 
-  sendSketchInfo(SN, SV);
-
   // OUTPUT
   if(HardwareVariant == 0)  {
     if(LoadVariant == 0)  {
+      sendSketchInfo(MN1, SV);
       present(RELAY_ID_1, S_BINARY, "Relay 1");   wait(PRESENTATION_DELAY);
     }
     else if(LoadVariant == 1) {
+      sendSketchInfo(MN2, SV);
       present(RELAY_ID_1, S_BINARY, "Relay 1");   wait(PRESENTATION_DELAY);
       present(RELAY_ID_2, S_BINARY, "Relay 2");   wait(PRESENTATION_DELAY);
     }
     else if(LoadVariant == 2) {
+      sendSketchInfo(MN3, SV);
       present(RS_ID, S_COVER, "Roller Shutter");  wait(PRESENTATION_DELAY);     
     }
   }
   else if(HardwareVariant == 1) {
     if(LoadVariant == 2)  {
+      sendSketchInfo(MN4, SV);
       present(DIMMER_ID, S_DIMMER, "Dimmer"); wait(PRESENTATION_DELAY);
     }
     else if(LoadVariant == 0) {
+      sendSketchInfo(MN5, SV);
       present(DIMMER_ID, S_RGB_LIGHT, "RGB"); wait(PRESENTATION_DELAY);
     }
     else if(LoadVariant == 1) {
+      sendSketchInfo(MN6, SV);
       present(DIMMER_ID, S_RGBW_LIGHT, "RGBW");   wait(PRESENTATION_DELAY);
     }
   }

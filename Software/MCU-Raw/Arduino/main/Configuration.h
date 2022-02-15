@@ -63,10 +63,10 @@
 #define DIMMING_STEP 10                     // Size of dimming step, increase for faster, less smooth dimming (default 1)
 #define DIMMING_INTERVAL 1                  // Duration of dimming interval, increase for slower dimming (default 10)
 #define R_VALUE_OFF 255                     // 255 - OFF, 0 - Full ON
-#define G_VALUE_OFF 128
-#define B_VALUE_OFF 0
-#define R_VALUE_ON 0
-#define G_VALUE_ON 128
+#define G_VALUE_OFF 230
+#define B_VALUE_OFF 204
+#define R_VALUE_ON 153
+#define G_VALUE_ON 204
 #define B_VALUE_ON 255
 #define BRIGHTNESS_VALUE_OFF 100            // Global brightness value should always be set to 100
 #define BRIGHTNESS_VALUE_ON 100

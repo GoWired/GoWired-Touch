@@ -52,9 +52,14 @@
                     MySensors Definitions
  *  *******************************************************************************************/
 // Identification
-#define MY_NODE_ID AUTO                            // Set node ID
-#define SN "GoWired Touch Module"               // Set node name to present to a controller
-#define SV "1.0"                                // Set sensor version
+#define MY_NODE_ID AUTO                            // Set module ID
+#define MN1 "GWT-2R-1c"                            // Set module name to present to a controller
+#define MN2 "GWT-2R-2c"
+#define MN3 "GWT-2R-RS"
+#define MN4 "GWT-D-1c"
+#define MN5 "GWT-D-3c"
+#define MN6 "GWT-D-4c"
+#define SV "1.0"                                   // Set software version
 
 // Selecting transmission settings
 #define MY_RS485                              // Enable RS485 transport layer
