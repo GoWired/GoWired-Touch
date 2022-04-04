@@ -16,22 +16,20 @@ class Dimmer
     void UpdateDimmer();
     void ChangeLevel();
     void ChangeColors();
-    void ChangeState();
+    void ChangeState(bool NewState);
     void NewColorValues(const char *input);
 
-    bool NewState = 0;
-    uint8_t NewDimmingLevel = 0;
+    bool CurrentState;
+    uint8_t NewDimmingLevel;
     uint8_t NewValues[4] = {255, 255, 255, 255};
 
   private:
-    bool _DimmerState;
     uint8_t _NumberOfChannels;
     uint8_t _DimmingStep;
     uint8_t _DimmingInterval;
     uint8_t _Channels[4];
     uint8_t _Values[4] = {0, 0, 0, 0};
     uint8_t _DimmingLevel;
-    //uint32_t _DimmerTime;
 
     byte fromhex(const char *str);
 };

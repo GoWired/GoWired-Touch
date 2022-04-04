@@ -4,7 +4,7 @@
  * hardware, software, enclosures and instructions necessary to build your own bus communicating
  * smart home installation.
  * 
- * GetWired is based on RS485 industrial communication standard. The software uses MySensors
+ * GoWired is based on RS485 industrial communication standard. The software uses MySensors
  * communication protocol (http://www.mysensors.org). 
  *
  * Created by feanor-anglin
@@ -117,12 +117,6 @@ void before() {
     MCUSR = 0;
     wdt_disable();
   #endif
-}
-
-/*  *******************************************************************************************
-                                            Setup
- *  *******************************************************************************************/
-void setup() {
 
   // Resistive hardware detection
   uint16_t ReadHardware = analogRead(HARDWARE_DETECTION_PIN);
@@ -179,6 +173,12 @@ void setup() {
 
   // Initializing LP5009/LP5012
   LP5009.Begin();
+}
+
+/*  *******************************************************************************************
+                                            Setup
+ *  *******************************************************************************************/
+void setup() {
 
   // LED: 0 || 1 || 2; R,G,B: 0-255, brightness: 0-255
   // LED0 - D1 (Touch Field A0), LED1 - D3 (Touch Field A2), LED2 - D2 (Touch Field A1)
@@ -253,7 +253,7 @@ void setup() {
 
   // Enable AVR Watchdog
   #ifdef ENABLE_WATCHDOG
-    wdt_enable(WDTO_2S);
+    wdt_enable(WDTO_8S);
   #endif
 
 }
@@ -266,30 +266,30 @@ void presentation() {
   // OUTPUT
   if(HardwareVariant == 0)  {
     if(LoadVariant == 0)  {
-      sendSketchInfo(MN1, SV);
+      sendSketchInfo("GWT-2R-1c", SV);
       present(RELAY_ID_1, S_BINARY, "Relay 1");   wait(PRESENTATION_DELAY);
     }
     else if(LoadVariant == 1) {
-      sendSketchInfo(MN2, SV);
+      sendSketchInfo("GWT-2R-2c", SV);
       present(RELAY_ID_1, S_BINARY, "Relay 1");   wait(PRESENTATION_DELAY);
       present(RELAY_ID_2, S_BINARY, "Relay 2");   wait(PRESENTATION_DELAY);
     }
     else if(LoadVariant == 2) {
-      sendSketchInfo(MN3, SV);
+      sendSketchInfo("GWT-2R-RS", SV);
       present(RS_ID, S_COVER, "Roller Shutter");  wait(PRESENTATION_DELAY);     
     }
   }
   else if(HardwareVariant == 1) {
     if(LoadVariant == 2)  {
-      sendSketchInfo(MN4, SV);
+      sendSketchInfo("GWT-D-1c", SV);
       present(DIMMER_ID, S_DIMMER, "Dimmer"); wait(PRESENTATION_DELAY);
     }
     else if(LoadVariant == 0) {
-      sendSketchInfo(MN5, SV);
+      sendSketchInfo("GWT-D-3c", SV);
       present(DIMMER_ID, S_RGB_LIGHT, "RGB"); wait(PRESENTATION_DELAY);
     }
     else if(LoadVariant == 1) {
-      sendSketchInfo(MN6, SV);
+      sendSketchInfo("GWT-D-4c", SV);
       present(DIMMER_ID, S_RGBW_LIGHT, "RGBW");   wait(PRESENTATION_DELAY);
     }
   }
@@ -376,11 +376,11 @@ void InitConfirmation() {
       request(DIMMER_ID, V_STATUS);
       wait(2000, C_SET, V_STATUS);
     
-      send(MsgPERCENTAGE.setSensor(DIMMER_ID).set(0));
+      send(MsgPERCENTAGE.setSensor(DIMMER_ID).set(Dimmer.NewDimmingLevel));
       request(DIMMER_ID, V_PERCENTAGE);
       wait(2000, C_SET, V_PERCENTAGE);
 
-      send(MsgRGB.setSensor(DIMMER_ID).set("000000"));
+      send(MsgRGB.setSensor(DIMMER_ID).set("ffffff"));
       request(DIMMER_ID, V_RGB);
       wait(2000, C_SET, V_RGB);
     }
@@ -390,11 +390,11 @@ void InitConfirmation() {
       request(DIMMER_ID, V_STATUS);
       wait(2000, C_SET, V_STATUS);
 
-      send(MsgPERCENTAGE.setSensor(DIMMER_ID).set(0));
+      send(MsgPERCENTAGE.setSensor(DIMMER_ID).set(Dimmer.NewDimmingLevel));
       request(DIMMER_ID, V_PERCENTAGE);
       wait(2000, C_SET, V_PERCENTAGE);
 
-      send(MsgRGBW.setSensor(DIMMER_ID).set("00000000"));
+      send(MsgRGBW.setSensor(DIMMER_ID).set("ffffffff"));
       request(DIMMER_ID, V_RGBW);
       wait(2000, C_SET, V_RGBW);
     }
@@ -404,7 +404,7 @@ void InitConfirmation() {
       request(DIMMER_ID, V_STATUS);
       wait(2000, C_SET, V_STATUS);
 
-      send(MsgPERCENTAGE.setSensor(DIMMER_ID).set(0));
+      send(MsgPERCENTAGE.setSensor(DIMMER_ID).set(Dimmer.NewDimmingLevel));
       request(DIMMER_ID, V_PERCENTAGE);
       wait(2000, C_SET, V_PERCENTAGE);
     }
@@ -607,11 +607,11 @@ void receive(const MyMessage &message)  {
     #endif
     if(HardwareVariant == 1)  {
       if (message.sensor == DIMMER_ID) {
-        Dimmer.NewState = message.getBool();
+        Dimmer.ChangeState(message.getBool());
         for(int i=0; i<2; i++)  {
-          AdjustLEDs(Dimmer.NewState, i);
+          AdjustLEDs(Dimmer.CurrentState, i);
         }
-        Dimmer.ChangeState();
+        
       }
     }
     if(HardwareVariant == 0 && LoadVariant != 2)  {
@@ -649,18 +649,12 @@ void receive(const MyMessage &message)  {
         MovementTime = RS.ReadNewPosition(NewPosition);
       }
     }
-    if(HardwareVariant == 1)  {
+    else if(HardwareVariant == 1)  {
       if(message.sensor == DIMMER_ID) {
         // Dimming value for dimmers (all variants)
         Dimmer.NewDimmingLevel = atoi(message.data);
         Dimmer.NewDimmingLevel = Dimmer.NewDimmingLevel > 100 ? 100 : Dimmer.NewDimmingLevel;
         Dimmer.NewDimmingLevel = Dimmer.NewDimmingLevel < 0 ? 0 : Dimmer.NewDimmingLevel;
-
-        Dimmer.NewState = true;
-        for(int i=0; i<2; i++)  {
-          AdjustLEDs(Dimmer.NewState, i);
-        }
-        Dimmer.ChangeLevel();
       }
     }
   }
@@ -670,12 +664,7 @@ void receive(const MyMessage &message)  {
       if(message.sensor == DIMMER_ID) {
         const char *rgbvalues = message.getString();
 
-        Dimmer.NewState = true;
-        for(int i=0; i<2; i++)  {
-          AdjustLEDs(Dimmer.NewState, i);
-        }
         Dimmer.NewColorValues(rgbvalues);
-        Dimmer.ChangeColors();
       }
     }
   }
@@ -752,20 +741,18 @@ void UpdateIO() {
         // RGBW Board
         else if(HardwareVariant == 1) {
           // Changing dimmer state (ON/OFF)
-          if(i == 0 || (i == 1 && !Dimmer.NewState))  {
-            Dimmer.NewState = !Dimmer.NewState;
-            AdjustLEDs(Dimmer.NewState, i);          
-            Dimmer.ChangeState();
-            send(MsgSTATUS.setSensor(DIMMER_ID).set(Dimmer.NewState));
+          if(i == 0 || (i == 1 && !Dimmer.CurrentState))  {          
+            Dimmer.ChangeState(!Dimmer.CurrentState);
+            AdjustLEDs(Dimmer.CurrentState, i);
+            send(MsgSTATUS.setSensor(DIMMER_ID).set(Dimmer.CurrentState));
             IO[i].SetState(0);
           }
-          else if(i == 1 && Dimmer.NewState) {
+          else if(i == 1 && Dimmer.CurrentState) {
             // Toggle dimming level by DIMMING_TOGGLE_STEP
             Dimmer.NewDimmingLevel += DIMMING_TOGGLE_STEP;
 
             Dimmer.NewDimmingLevel = Dimmer.NewDimmingLevel > 100 ? DIMMING_TOGGLE_STEP : Dimmer.NewDimmingLevel;
             send(MsgPERCENTAGE.setSensor(DIMMER_ID).set(Dimmer.NewDimmingLevel));
-            Dimmer.ChangeLevel();
             IO[i].SetState(0);
           }
         }
@@ -798,7 +785,7 @@ void UpdateIO() {
             }
           }
           else if(HardwareVariant == 1) {
-            if(Dimmer.NewState) {
+            if(Dimmer.CurrentState) {
               AdjustLEDs(1, 0); AdjustLEDs(0, 1);
             }
             else  {
@@ -1039,6 +1026,9 @@ void loop() {
     if(HardwareVariant == 0 && LoadVariant == 2)  {
       UpdateRS();
     }
+    else if(HardwareVariant == 1)  {
+      Dimmer.UpdateDimmer();
+    }
   }
 
   // Reading power sensor
@@ -1051,7 +1041,7 @@ void loop() {
     }
     // RGBW Board
     if(HardwareVariant == 1)  {
-      if (Dimmer.NewState)  {
+      if (Dimmer.CurrentState)  {
         Current = PS.MeasureDC(Vcc);
       }
     }
@@ -1097,9 +1087,8 @@ void loop() {
       }
       // Board: RGBW
       else if(HardwareVariant == 1) {
-        Dimmer.NewState = false;
-        Dimmer.ChangeState();
-        send(MsgSTATUS.setSensor(DIMMER_ID).set(Dimmer.NewState));
+        Dimmer.ChangeState(false);
+        send(MsgSTATUS.setSensor(DIMMER_ID).set(Dimmer.CurrentState));
       }
       send(MsgSTATUS.setSensor(ES_ID).set(OVERCURRENT_ERROR));
       InformControllerES = true;
