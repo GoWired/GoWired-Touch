@@ -9,7 +9,8 @@
  *  *******************************************************************************************/
 Dimmer::Dimmer()	{
 
-    NewState = 0;
+    NewDimmingLevel = 20;
+    CurrentState = false;
     _DimmingLevel = 20;
 	
 }
@@ -22,7 +23,6 @@ void Dimmer::SetValues(uint8_t NumberOfChannels, uint8_t DimmingStep, uint8_t Di
 	_NumberOfChannels = NumberOfChannels;
 	_DimmingStep = DimmingStep;
 	_DimmingInterval = DimmingInterval;
-	_DimmerState = false;
 
   uint8_t Channels[4] = {Pin1, Pin2, Pin3, Pin4};
 
@@ -37,52 +37,54 @@ void Dimmer::UpdateDimmer()	{
 	bool AdjustDimming = true;
 	bool AdjustColors = true;
 	bool ColorStates[4] = {false, false, false, false};
-	int DeltaDimming = 0;
-	int DeltaColors = 0;
+	uint8_t DeltaDimming = 0;
+	uint8_t DeltaColors = 0;
 	uint32_t Time = millis() - _DimmingInterval;
 	
-	do	{
-    if(millis() > Time + _DimmingInterval)	{
-		  if(_DimmingLevel != NewDimmingLevel)	{
-			  AdjustDimming = true;
-			  DeltaDimming = (NewDimmingLevel - _DimmingLevel) < 0 ? -_DimmingStep : _DimmingStep;
-			  _DimmingLevel += DeltaDimming;
-		  }
-		  else	{
-			  AdjustDimming = false;
-		  }
+  if(CurrentState) {
+	  do	{
+      if(millis() > Time + _DimmingInterval)	{
+		    if(_DimmingLevel != NewDimmingLevel)	{
+			    AdjustDimming = true;
+			    DeltaDimming = (NewDimmingLevel - _DimmingLevel) < 0 ? -_DimmingStep : _DimmingStep;
+			    _DimmingLevel += DeltaDimming;
+		    }
+		    else	{
+			    AdjustDimming = false;
+		    }
 	
-		  for(int i=0; i<_NumberOfChannels; i++) {
-			  if(_Values[i] != NewValues[i])	{
-				  ColorStates[i] = true;
-				  DeltaColors = (_Values[i] - NewValues[i]) > 0 ? -_DimmingStep : _DimmingStep;
-				  _Values[i] += DeltaColors;
-			  }
-			  else	{
-				  ColorStates[i] = false;
-			  }
-		  }
+		    for(int i=0; i<_NumberOfChannels; i++) {
+			    if(_Values[i] != NewValues[i])	{
+				    ColorStates[i] = true;
+				    DeltaColors = (_Values[i] - NewValues[i]) > 0 ? -_DimmingStep : _DimmingStep;
+				    _Values[i] += DeltaColors;
+			    }
+			    else	{
+				    ColorStates[i] = false;
+			    }
+		    }
 		
-		  for(int i=0; i<_NumberOfChannels; i++) {
-			  if(ColorStates[i])	{
-				  AdjustColors = true;
-				  break;
-			  }
-        else  {
-          AdjustColors = false;
-        }
-		  }
+		    for(int i=0; i<_NumberOfChannels; i++) {
+			    if(ColorStates[i] == true)	{
+				    AdjustColors = true;
+				    break;
+			    }
+          else  {
+            AdjustColors = false;
+          }
+		    }
 		
-		  for(int i=0; i<_NumberOfChannels; i++) {
-			  analogWrite(_Channels[i], (int)(_DimmingLevel / 100.0 * _Values[i]));
-		  }
+		    for(int i=0; i<_NumberOfChannels; i++) {
+			    analogWrite(_Channels[i], (int)(_DimmingLevel / 100.0 * _Values[i]));
+		    }
 
-      Time = millis();
-    }
-    else if(millis() < Time) {
-      Time = millis();
-    }
-	} while(AdjustColors || AdjustDimming);
+        Time = millis();
+      }
+      else if(millis() < Time) {
+        Time = millis();
+      }
+	  } while(AdjustColors || AdjustDimming);
+  }
 }
 
 /*  *******************************************************************************************
@@ -133,24 +135,29 @@ void Dimmer::ChangeColors() {
 /*  *******************************************************************************************
  *                                      Change Status
  *  *******************************************************************************************/
-void Dimmer::ChangeState() {
+void Dimmer::ChangeState(bool NewState) {
 
-  _DimmerState = NewState;
+  uint8_t TempDimmingLevel = NewDimmingLevel;
+
+  if(NewState != CurrentState)  {
+    CurrentState = NewState;
   
-  if(!NewState) {
-    uint8_t TempLevel = _DimmingLevel;
-    NewDimmingLevel = 0;
+    if(!NewState) {
+      uint8_t TempLevel = _DimmingLevel;
+      NewDimmingLevel = 0;
 
-    ChangeLevel();
+      ChangeLevel();
 
-    _DimmingLevel = TempLevel;
+      _DimmingLevel = TempLevel;
+    }
+    else  {
+      //NewDimmingLevel = _DimmingLevel;
+      _DimmingLevel = 0;
+
+      ChangeLevel();
+    }
   }
-  else  {
-    NewDimmingLevel = _DimmingLevel;
-    _DimmingLevel = 0;
-
-    ChangeLevel();
-  }
+  NewDimmingLevel = TempDimmingLevel;
 }
 
 /*  *******************************************************************************************
